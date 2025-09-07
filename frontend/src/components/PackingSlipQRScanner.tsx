@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
-import { BrowserQRCodeReader, NotFoundException } from "@zxing/library";
+import { BrowserQRCodeReader } from "@zxing/browser";
 import { toast } from "react-toastify";
 import { PackingSlipItem } from "../types";
 import { Camera, X, CheckCircle } from "lucide-react";
@@ -141,7 +141,7 @@ const PackingSlipQRScanner: React.FC<PackingSlipQRScannerProps> = ({ items, setI
       codeReader.current = new BrowserQRCodeReader();
 
       codeReader.current
-        .decodeFromVideoDevice(null, videoRef.current, (result, err) => {
+        .decodeFromVideoDevice(undefined, videoRef.current, (result: any, err: any) => {
           if (result) {
             setScanning(false);
             try {
@@ -162,7 +162,7 @@ const PackingSlipQRScanner: React.FC<PackingSlipQRScannerProps> = ({ items, setI
               setTimeout(() => setScanning(true), 2000);
             }
           }
-          if (err && !(err instanceof NotFoundException)) {
+          if (err) {
             setCameraError("Could not scan QR code.");
           }
         })

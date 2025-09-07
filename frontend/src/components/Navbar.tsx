@@ -1,11 +1,12 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
 import { Home, Plus, BarChart3, TrendingUp, Package, History, Search, Users } from 'lucide-react';
 import AllenJorgioLogo from './AllenJorgioLogo';
 
 const Navbar: React.FC = () => {
-  const location = useLocation();
+  const router = useRouter();
 
   const navItems = [
     { path: '/', label: 'Home', icon: Home },
@@ -23,7 +24,7 @@ const Navbar: React.FC = () => {
       <div className="w-full px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16 w-full">
           <div className="flex items-center">
-            <Link to="/" className="flex items-center">
+            <Link href="/" className="flex items-center">
               <motion.div
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -37,11 +38,11 @@ const Navbar: React.FC = () => {
           <div className="flex items-center space-x-2 flex-1 justify-end">
             {navItems.map((item) => {
               const IconComponent = item.icon;
-              const isActive = location.pathname === item.path;
+              const isActive = router.pathname === item.path;
               return (
                 <Link
                   key={item.path}
-                  to={item.path}
+                  href={item.path}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center space-x-2 ${
                     isActive
                       ? 'bg-blue-100 text-blue-700 shadow-sm'

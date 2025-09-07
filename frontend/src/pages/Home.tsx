@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Plus, BarChart3, Package, TrendingUp, ArrowRight, QrCode, Clock, FileText } from 'lucide-react';
 import AllenJorgioLogo from '../components/AllenJorgioLogo';
@@ -77,7 +77,7 @@ const Home: React.FC = () => {
                 whileHover={{ y: -8, scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
-                <Link to={feature.path}>
+                <Link href={feature.path}>
                   <div className="bg-white rounded-2xl p-8 shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-100 h-full flex flex-col group">
                     <div className="text-center flex-1">
                       <div className={`w-16 h-16 ${feature.color} rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300`}>
