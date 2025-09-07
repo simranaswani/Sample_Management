@@ -1,46 +1,167 @@
-# Getting Started with Create React App
+# Sample Management System
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A Next.js application for managing textile samples with QR code integration, inventory tracking, and automated packing slip generation.
 
-## Available Scripts
+## Features
 
-In the project directory, you can run:
+- **Sample Management**: Create and manage textile samples with QR code generation
+- **Stock Status**: View aggregated stock levels and inventory status
+- **Packing Slips**: Generate packing slips with QR code scanning
+- **Receiver History**: Track unique merchant and design combinations sent to receivers
+- **QR Code Scanner**: Real-time QR code scanning for packing slip creation
 
-### `npm start`
+## Technology Stack
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+- **Frontend**: Next.js 14, React 18, TypeScript
+- **Backend**: Next.js API Routes
+- **Database**: MongoDB Atlas
+- **Styling**: Custom CSS with Tailwind-like utilities
+- **QR Codes**: qrcode.react, @zxing/browser
+- **Animations**: Framer Motion
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+## Setup Instructions
 
-### `npm test`
+### 1. Install Dependencies
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+```bash
+npm install
+```
 
-### `npm run build`
+### 2. Environment Variables
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Create a `.env.local` file in the root directory:
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+```env
+MONGODB_URI=mongodb+srv://simranaswani4292_db_user:<fRz4HrcnpPjFa6Gf>@samplemanagementcluster.crgxmmt.mongodb.net/?retryWrites=true&w=majority&appName=SampleManagementCluster
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### 3. Development
 
-### `npm run eject`
+```bash
+npm run dev
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+The application will be available at `http://localhost:3000`
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### 4. Production Build
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+```bash
+npm run build
+npm start
+```
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+## Deployment on Vercel
 
-## Learn More
+### 1. Connect to Vercel
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+1. Go to [Vercel](https://vercel.com)
+2. Import your GitHub repository
+3. Select the `frontend` folder as the root directory
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+### 2. Environment Variables
+
+In Vercel dashboard, add the environment variable:
+
+- `MONGODB_URI`: Your MongoDB Atlas connection string
+
+### 3. Deploy
+
+Vercel will automatically deploy your application. The API routes will be available at:
+
+- `/api/health` - Health check
+- `/api/samples` - Sample management
+- `/api/packing-slips` - Packing slip management
+
+## API Endpoints
+
+### Samples
+- `GET /api/samples` - Get all samples
+- `POST /api/samples` - Create sample(s)
+
+### Packing Slips
+- `GET /api/packing-slips` - Get all packing slips
+- `GET /api/packing-slips?receiver_history=true` - Get receiver history
+- `POST /api/packing-slips` - Create packing slip
+- `GET /api/packing-slips/[id]` - Get packing slip by ID
+- `PUT /api/packing-slips/[id]` - Update packing slip
+- `DELETE /api/packing-slips/[id]` - Delete packing slip
+
+## Database Schema
+
+### Sample
+```javascript
+{
+  merchant: String,
+  productionSampleType: String,
+  designNo: String,
+  pieces: Number,
+  dateCreated: Date,
+  qrCodeId: String (unique)
+}
+```
+
+### PackingSlip
+```javascript
+{
+  receiverName: String,
+  brokerName: String,
+  packingSlipNumber: String,
+  date: Date,
+  courier: String,
+  docNo: String,
+  items: [{
+    srNo: Number,
+    merchant: String,
+    productionSampleType: String,
+    designNo: String,
+    totalPieces: Number
+  }]
+}
+```
+
+## Features Overview
+
+### 1. Sample Management
+- Create new samples with automatic QR code generation
+- View all samples with search and filter capabilities
+- Generate QR codes for printing
+
+### 2. Stock Status
+- View aggregated stock levels by merchant and design
+- Filter by merchant, design number, and date range
+- Export data to CSV
+
+### 3. Packing Slip Management
+- Create packing slips with automatic numbering (PS-YYYYXXXX format)
+- QR code scanning for quick item addition
+- PDF generation for packing slips
+- Dispatch tracking with courier and document numbers
+
+### 4. Receiver History
+- Track unique merchant/design combinations sent to each receiver
+- View detailed packing slip information
+- Export receiver history to PDF
+
+## QR Code Format
+
+QR codes contain JSON data with the following structure:
+```json
+{
+  "merchant": "MERCHANT_NAME",
+  "productionSampleType": "SAMPLE_TYPE",
+  "designNo": "DESIGN_NUMBER",
+  "qrCodeId": "UNIQUE_ID"
+}
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## License
+
+This project is proprietary software for Allen Jorgio textile manufacturing.

@@ -1,0 +1,12 @@
+{
+  "name": "migration-script",
+  "version": "1.0.0",
+  "description": "Migrate data from local MongoDB to Atlas",
+  "main": "migrate_to_atlas.js",
+  "scripts": {
+    "migrate": "node migrate_to_atlas.js"
+  },
+  "dependencies": {
+    "mongoose": "^8.0.0"
+  }
+}

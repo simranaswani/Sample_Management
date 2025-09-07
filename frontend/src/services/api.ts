@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { Sample, PackingSlip } from '../types';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:3000/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -45,7 +45,7 @@ export const packingSlipAPI = {
   
   deletePackingSlip: (id: string) => api.delete(`/packing-slips/${id}`),
   
-  getReceiverHistory: () => api.get('/packing-slips/receiver-history'),
+  getReceiverHistory: () => api.get('/packing-slips?receiver_history=true'),
 };
 
 export default api;
