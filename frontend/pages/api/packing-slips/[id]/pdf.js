@@ -1,5 +1,5 @@
-import connectDB from '../../../lib/db';
-import PackingSlip from '../../../models/PackingSlip';
+import connectDB from '../../../../lib/db';
+import PackingSlip from '../../../../models/PackingSlip';
 
 export default async function handler(req, res) {
   await connectDB();
