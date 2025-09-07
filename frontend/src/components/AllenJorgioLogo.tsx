@@ -59,13 +59,6 @@ const AllenJorgioLogo: React.FC<AllenJorgioLogoProps> = ({
         </text>
       </svg>
       
-      {showSubtitle && (
-        <div className="flex flex-col">
-          <span className="text-sm font-medium text-gray-600 leading-tight">
-            Textile Sample Management
-          </span>
-        </div>
-      )}
     </div>
   );
 };

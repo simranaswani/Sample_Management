@@ -16,6 +16,12 @@ const PackingSlipSchema = new mongoose.Schema({
     type: Date, 
     default: Date.now 
   },
+  courier: { 
+    type: String 
+  },
+  docNo: { 
+    type: String 
+  },
   items: [
     {
       srNo: Number,

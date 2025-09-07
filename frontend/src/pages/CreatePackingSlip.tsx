@@ -8,10 +8,26 @@ import 'react-toastify/dist/ReactToastify.css';
 
 
 const CreatePackingSlip: React.FC = () => {
+  // Generate financial year format packing slip number
+  const generatePackingSlipNumber = () => {
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth() + 1; // 0-based month
+    
+    // Indian financial year starts from April (month 4)
+    // If current month is April or later, use current year, otherwise use previous year
+    const financialYear = currentMonth >= 4 ? currentYear : currentYear - 1;
+    const financialYearShort = financialYear.toString().slice(-2) + (financialYear + 1).toString().slice(-2);
+    
+    // For frontend preview, we'll use a placeholder count
+    // The actual count will be determined by the backend
+    return `PS-${financialYearShort}XXXX`;
+  };
+
   const [formData, setFormData] = useState({
     receiverName: '',
     brokerName: '',
-    packingSlipNumber: `PS-${Date.now()}`,
+    packingSlipNumber: generatePackingSlipNumber(),
     date: new Date().toISOString().split('T')[0]
   });
   const [items, setItems] = useState<PackingSlipItem[]>([]);
@@ -32,13 +48,31 @@ const CreatePackingSlip: React.FC = () => {
       designNo: '',
       totalPieces: 0
     };
-    setItems([...items, newItem]);
+    const updatedItems = [...items, newItem];
+    // Sort items alphabetically by merchant name
+    const sortedItems = updatedItems.sort((a, b) => {
+      const merchantA = a.merchant.toLowerCase();
+      const merchantB = b.merchant.toLowerCase();
+      return merchantA.localeCompare(merchantB);
+    });
+    // Update serial numbers after sorting
+    const renumberedItems = sortedItems.map((item, index) => ({
+      ...item,
+      srNo: index + 1
+    }));
+    setItems(renumberedItems);
   };
 
   const removeItem = (index: number) => {
     const updatedItems = items.filter((_, i) => i !== index);
-    // Update serial numbers
-    const renumberedItems = updatedItems.map((item, i) => ({
+    // Sort items alphabetically by merchant name
+    const sortedItems = updatedItems.sort((a, b) => {
+      const merchantA = a.merchant.toLowerCase();
+      const merchantB = b.merchant.toLowerCase();
+      return merchantA.localeCompare(merchantB);
+    });
+    // Update serial numbers after sorting
+    const renumberedItems = sortedItems.map((item, i) => ({
       ...item,
       srNo: i + 1
     }));
@@ -48,7 +82,23 @@ const CreatePackingSlip: React.FC = () => {
   const updateItem = (index: number, field: keyof PackingSlipItem, value: string | number) => {
     const updatedItems = [...items];
     updatedItems[index] = { ...updatedItems[index], [field]: value };
-    setItems(updatedItems);
+    
+    // If merchant field is updated, sort items alphabetically
+    if (field === 'merchant') {
+      const sortedItems = updatedItems.sort((a, b) => {
+        const merchantA = a.merchant.toLowerCase();
+        const merchantB = b.merchant.toLowerCase();
+        return merchantA.localeCompare(merchantB);
+      });
+      // Update serial numbers after sorting
+      const renumberedItems = sortedItems.map((item, i) => ({
+        ...item,
+        srNo: i + 1
+      }));
+      setItems(renumberedItems);
+    } else {
+      setItems(updatedItems);
+    }
   };
 
 
@@ -75,7 +125,7 @@ const CreatePackingSlip: React.FC = () => {
       setFormData({
         receiverName: '',
         brokerName: '',
-        packingSlipNumber: `PS-${Date.now()}`,
+        packingSlipNumber: generatePackingSlipNumber(),
         date: new Date().toISOString().split('T')[0]
       });
       setItems([]);
@@ -165,7 +215,9 @@ const CreatePackingSlip: React.FC = () => {
                     readOnly
                     className="input-optimized px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed"
                   />
-                  <p className="text-xs text-gray-500 mt-1">Auto-generated</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Auto-generated in format PS-{new Date().getFullYear().toString().slice(-2)}{(new Date().getFullYear() + 1).toString().slice(-2)}XXXX
+                  </p>
                 </div>
 
                 <div>
@@ -187,7 +239,10 @@ const CreatePackingSlip: React.FC = () => {
             {/* Items Table */}
             <div className="bg-gray-50 p-6 rounded-lg">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-gray-800">Items</h3>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800">Items</h3>
+                  <p className="text-sm text-gray-600 mt-1">Add items manually or scan QR codes. Fill in all required fields.</p>
+                </div>
                 <div className="flex gap-3">
                   <button
                     type="button"
@@ -215,7 +270,7 @@ const CreatePackingSlip: React.FC = () => {
                       <tr>
                         <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Sr. No.</th>
                         <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Merchant</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Sample Type</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
                         <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Design No.</th>
                         <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Pieces</th>
                         <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">QR ID</th>
@@ -231,6 +286,7 @@ const CreatePackingSlip: React.FC = () => {
                               type="text"
                               value={item.merchant}
                               onChange={(e) => updateItem(index, 'merchant', e.target.value)}
+                              placeholder={item.merchant ? "" : "Enter merchant name"}
                               className="input-optimized-sm px-2 py-1 border border-gray-300 rounded text-sm"
                             />
                           </td>
@@ -239,6 +295,7 @@ const CreatePackingSlip: React.FC = () => {
                               type="text"
                               value={item.productionSampleType}
                               onChange={(e) => updateItem(index, 'productionSampleType', e.target.value)}
+                              placeholder={item.productionSampleType ? "" : "Paper Booklet, Hanger, etc."}
                               className="input-optimized-sm px-2 py-1 border border-gray-300 rounded text-sm"
                             />
                           </td>
@@ -247,6 +304,7 @@ const CreatePackingSlip: React.FC = () => {
                               type="text"
                               value={item.designNo}
                               onChange={(e) => updateItem(index, 'designNo', e.target.value)}
+                              placeholder={item.designNo ? "" : "Enter design number"}
                               className="input-optimized-sm px-2 py-1 border border-gray-300 rounded text-sm"
                             />
                           </td>
@@ -255,6 +313,7 @@ const CreatePackingSlip: React.FC = () => {
                               type="number"
                               value={item.totalPieces}
                               onChange={(e) => updateItem(index, 'totalPieces', parseInt(e.target.value) || 0)}
+                              placeholder={item.totalPieces > 0 ? "" : "0"}
                               className="input-optimized-sm px-2 py-1 border border-gray-300 rounded text-sm"
                               min="1"
                             />

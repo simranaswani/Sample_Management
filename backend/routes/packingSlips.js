@@ -8,7 +8,39 @@ require('jspdf-autotable');
 router.post('/', async (req, res) => {
   try {
     console.log('Creating packing slip with data:', JSON.stringify(req.body, null, 2));
-    const packingSlip = new PackingSlip(req.body);
+    
+    // Generate unique packing slip number in format PS-{financial_year}{count}
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth() + 1; // 0-based month
+    
+    // Indian financial year starts from April (month 4)
+    // If current month is April or later, use current year, otherwise use previous year
+    const financialYear = currentMonth >= 4 ? currentYear : currentYear - 1;
+    const financialYearShort = financialYear.toString().slice(-2) + (financialYear + 1).toString().slice(-2);
+    
+    // Get the count of existing packing slips for this financial year
+    const existingSlips = await PackingSlip.find({
+      packingSlipNumber: { $regex: `^PS-${financialYearShort}` }
+    }).sort({ packingSlipNumber: -1 });
+    
+    // Get the next count number
+    let nextCount = 1;
+    if (existingSlips.length > 0) {
+      const lastSlipNumber = existingSlips[0].packingSlipNumber;
+      const lastCount = parseInt(lastSlipNumber.split('-')[1].slice(4));
+      nextCount = lastCount + 1;
+    }
+    
+    const packingSlipNumber = `PS-${financialYearShort}${nextCount.toString().padStart(4, '0')}`;
+    
+    // Add packing slip number to the request body
+    const packingSlipData = {
+      ...req.body,
+      packingSlipNumber: packingSlipNumber
+    };
+    
+    const packingSlip = new PackingSlip(packingSlipData);
     const savedSlip = await packingSlip.save();
     console.log('Saved packing slip:', JSON.stringify(savedSlip, null, 2));
     res.status(201).json(savedSlip);
@@ -26,6 +58,72 @@ router.get('/', async (req, res) => {
   } catch (error) {
     console.error('Error fetching packing slips:', error);
     res.status(500).json({ error: 'Failed to fetch packing slips' });
+  }
+});
+
+// Get receiver history - unique merchant/design combinations sent to each receiver
+router.get('/receiver-history', async (req, res) => {
+  try {
+    // Get all dispatched packing slips (have courier and docNo)
+    const dispatchedSlips = await PackingSlip.find({
+      courier: { $exists: true, $ne: null, $ne: '' },
+      docNo: { $exists: true, $ne: null, $ne: '' }
+    });
+
+    // Process the data to group by receiver and aggregate unique combinations
+    const receiverHistory = {};
+
+    dispatchedSlips.forEach(slip => {
+      const receiverName = slip.receiverName;
+      
+      if (!receiverHistory[receiverName]) {
+        receiverHistory[receiverName] = {
+          receiverName: receiverName,
+          totalPackingSlips: 0,
+          combinations: {}
+        };
+      }
+
+      receiverHistory[receiverName].totalPackingSlips++;
+
+      // Process each item in the packing slip
+      slip.items.forEach(item => {
+        const combinationKey = `${item.merchant}|${item.designNo}`;
+        
+        if (!receiverHistory[receiverName].combinations[combinationKey]) {
+          receiverHistory[receiverName].combinations[combinationKey] = {
+            merchant: item.merchant,
+            designNo: item.designNo,
+            totalPieces: 0,
+            packingSlipNumbers: []
+          };
+        }
+
+        receiverHistory[receiverName].combinations[combinationKey].totalPieces += item.totalPieces;
+        
+        // Add packing slip number if not already present
+        if (!receiverHistory[receiverName].combinations[combinationKey].packingSlipNumbers.includes(slip.packingSlipNumber)) {
+          receiverHistory[receiverName].combinations[combinationKey].packingSlipNumbers.push(slip.packingSlipNumber);
+        }
+      });
+    });
+
+    // Convert to array format and sort
+    const result = Object.values(receiverHistory).map(receiver => ({
+      ...receiver,
+      combinations: Object.values(receiver.combinations).sort((a, b) => {
+        // Sort by merchant name, then by design number
+        if (a.merchant !== b.merchant) {
+          return a.merchant.localeCompare(b.merchant);
+        }
+        return a.designNo.localeCompare(b.designNo);
+      })
+    })).sort((a, b) => a.receiverName.localeCompare(b.receiverName));
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error fetching receiver history:', error);
+    res.status(500).json({ error: 'Failed to fetch receiver history' });
   }
 });
 
@@ -140,9 +238,6 @@ router.get('/:id/pdf', async (req, res) => {
       finalY = 120;
     }
     
-    doc.setFontSize(10);
-    doc.text('Generated on: ' + new Date().toLocaleString(), 20, finalY);
-    
     // Allen Jorgio Footer
     doc.setFontSize(8);
     doc.setFont('helvetica', 'italic');
@@ -167,6 +262,9 @@ router.get('/:id/pdf', async (req, res) => {
 // Update packing slip
 router.put('/:id', async (req, res) => {
   try {
+    console.log('Update request for ID:', req.params.id);
+    console.log('Update data:', req.body);
+    
     const packingSlip = await PackingSlip.findByIdAndUpdate(
       req.params.id,
       req.body,
@@ -177,6 +275,7 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Packing slip not found' });
     }
     
+    console.log('Updated packing slip:', packingSlip);
     res.json(packingSlip);
   } catch (error) {
     console.error('Error updating packing slip:', error);

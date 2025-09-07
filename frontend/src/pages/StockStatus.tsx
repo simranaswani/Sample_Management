@@ -49,13 +49,13 @@ const StockStatus: React.FC = () => {
   }, [fetchStockData]);
 
   return (
-    <div className="min-h-screen bg-gray-50 py-6">
+    <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="bg-white rounded-xl shadow-lg p-6"
+          className="bg-white rounded-xl shadow-lg p-6 mt-4"
         >
           <div className="text-center mb-6">
             <h1 className="text-2xl font-bold text-gray-900 mb-2">
@@ -76,7 +76,7 @@ const StockStatus: React.FC = () => {
                 </div>
               </div>
               <div className="p-5 text-center">
-                <h3 className="text-lg font-semibold text-gray-900">Sample Types</h3>
+                <h3 className="text-lg font-semibold text-gray-900">Types</h3>
                 <p className="text-3xl font-bold text-gray-800 mt-2">{summary.totalSamples}</p>
                 <p className="text-sm text-gray-500 mt-1">Categories</p>
               </div>

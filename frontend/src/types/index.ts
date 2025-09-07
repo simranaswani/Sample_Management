@@ -25,6 +25,8 @@ export interface PackingSlip {
   packingSlipNumber: string;
   date: string;
   items: PackingSlipItem[];
+  courier?: string;
+  docNo?: string;
 }
 
 export interface StockSummary {

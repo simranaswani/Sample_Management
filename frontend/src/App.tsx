@@ -9,6 +9,7 @@ import CreatePackingSlip from './pages/CreatePackingSlip';
 import ViewQRs from './pages/ViewQRs';
 import DailyProduction from './pages/DailyProduction';
 import PackingSlipHistory from './pages/PackingSlipHistory';
+import ReceiverHistory from './pages/ReceiverHistory';
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
             <Route path="/view-qrs" element={<ViewQRs />} />
             <Route path="/daily-production" element={<DailyProduction />} />
             <Route path="/packing-slip-history" element={<PackingSlipHistory />} />
+            <Route path="/receiver-history" element={<ReceiverHistory />} />
           </Routes>
         </motion.main>
       </div>

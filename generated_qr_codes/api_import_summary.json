@@ -1,0 +1,72 @@
+{
+  "message": "Bulk import completed",
+  "summary": {
+    "totalRecords": 333,
+    "successCount": 333,
+    "errorCount": 0,
+    "importedAt": "2025-09-07T12:31:23.047Z",
+    "errors": []
+  },
+  "createdSamples": [
+    {
+      "merchant": "ASPIRE",
+      "productionSampleType": "Paper Booklet",
+      "designNo": "246",
+      "pieces": 1,
+      "dateCreated": "2025-09-07T00:00:00.000Z",
+      "qrCodeId": "QR_1757246762301_1",
+      "_id": "68bd7b191f49fece62452480",
+      "createdAt": "2025-09-07T12:31:21.417Z",
+      "updatedAt": "2025-09-07T12:31:21.417Z",
+      "__v": 0
+    },
+    {
+      "merchant": "ASPIRE",
+      "productionSampleType": "Paper Booklet",
+      "designNo": "4919",
+      "pieces": 1,
+      "dateCreated": "2025-09-07T00:00:00.000Z",
+      "qrCodeId": "QR_1757246762459_2",
+      "_id": "68bd7b191f49fece62452483",
+      "createdAt": "2025-09-07T12:31:21.422Z",
+      "updatedAt": "2025-09-07T12:31:21.422Z",
+      "__v": 0
+    },
+    {
+      "merchant": "ASPIRE",
+      "productionSampleType": "Paper Booklet",
+      "designNo": "983",
+      "pieces": 1,
+      "dateCreated": "2025-09-07T00:00:00.000Z",
+      "qrCodeId": "QR_1757246762530_3",
+      "_id": "68bd7b191f49fece62452486",
+      "createdAt": "2025-09-07T12:31:21.431Z",
+      "updatedAt": "2025-09-07T12:31:21.431Z",
+      "__v": 0
+    },
+    {
+      "merchant": "ASPIRE",
+      "productionSampleType": "Paper Booklet",
+      "designNo": "ASP001",
+      "pieces": 1,
+      "dateCreated": "2025-09-07T00:00:00.000Z",
+      "qrCodeId": "QR_1757246762575_4",
+      "_id": "68bd7b191f49fece62452489",
+      "createdAt": "2025-09-07T12:31:21.442Z",
+      "updatedAt": "2025-09-07T12:31:21.442Z",
+      "__v": 0
+    },
+    {
+      "merchant": "ASPIRE",
+      "productionSampleType": "Paper Booklet",
+      "designNo": "H21733",
+      "pieces": 1,
+      "dateCreated": "2025-09-07T00:00:00.000Z",
+      "qrCodeId": "QR_1757246762606_5",
+      "_id": "68bd7b191f49fece6245248c",
+      "createdAt": "2025-09-07T12:31:21.451Z",
+      "updatedAt": "2025-09-07T12:31:21.451Z",
+      "__v": 0
+    }
+  ]
+}

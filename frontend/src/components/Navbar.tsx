@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Home, Plus, BarChart3, TrendingUp, Package, History, Search } from 'lucide-react';
+import { Home, Plus, BarChart3, TrendingUp, Package, History, Search, Users } from 'lucide-react';
 import AllenJorgioLogo from './AllenJorgioLogo';
 
 const Navbar: React.FC = () => {
@@ -14,13 +14,14 @@ const Navbar: React.FC = () => {
     { path: '/daily-production', label: 'Daily Production', icon: TrendingUp },
     { path: '/create-packing-slip', label: 'Packing Slip', icon: Package },
     { path: '/packing-slip-history', label: 'Packing History', icon: History },
+    { path: '/receiver-history', label: 'Receiver History', icon: Users },
     { path: '/view-qrs', label: 'View QRs', icon: Search },
   ];
 
   return (
     <nav className="bg-white shadow-lg border-b border-gray-200 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
+      <div className="w-full px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center h-16 w-full">
           <div className="flex items-center">
             <Link to="/" className="flex items-center">
               <motion.div
@@ -33,7 +34,7 @@ const Navbar: React.FC = () => {
             </Link>
           </div>
           
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 flex-1 justify-end">
             {navItems.map((item) => {
               const IconComponent = item.icon;
               const isActive = location.pathname === item.path;

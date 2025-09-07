@@ -22,6 +22,7 @@ const DailyProduction: React.FC = () => {
       setSamples(response.data);
     } catch (error) {
       console.error('Error fetching samples:', error);
+      setSamples([]);
     } finally {
       setLoading(false);
     }
@@ -103,7 +104,7 @@ const DailyProduction: React.FC = () => {
           className="bg-white rounded-xl shadow-lg p-8"
         >
           <h1 className="text-3xl font-bold text-gray-900 mb-8 text-center">
-            Allen Jorgio - Daily Production
+            Daily Production Record
           </h1>
 
           {/* Filters */}

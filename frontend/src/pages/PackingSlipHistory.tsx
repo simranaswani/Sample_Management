@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
+import { X } from 'lucide-react';
 import { packingSlipAPI } from '../services/api';
 import { PackingSlip } from '../types';
 
@@ -13,11 +14,29 @@ const PackingSlipHistory: React.FC = () => {
     packingSlipNumber: '',
     date: ''
   });
+  const [dispatchPopup, setDispatchPopup] = useState<{
+    isOpen: boolean;
+    slipId: string;
+    packingSlipNumber: string;
+  }>({
+    isOpen: false,
+    slipId: '',
+    packingSlipNumber: ''
+  });
+  const [dispatchData, setDispatchData] = useState({
+    courier: '',
+    docNo: ''
+  });
+  const [validationErrors, setValidationErrors] = useState({
+    courier: '',
+    docNo: ''
+  });
 
   const fetchPackingSlips = async () => {
     setLoading(true);
     try {
       const response = await packingSlipAPI.getAllPackingSlips();
+      console.log('Fetched packing slips:', response.data);
       setPackingSlips(response.data);
     } catch (error) {
       console.error('Error fetching packing slips:', error);
@@ -86,6 +105,74 @@ const PackingSlipHistory: React.FC = () => {
     }
   };
 
+  const openDispatchPopup = (slipId: string, packingSlipNumber: string) => {
+    setDispatchPopup({
+      isOpen: true,
+      slipId,
+      packingSlipNumber
+    });
+    setDispatchData({ courier: '', docNo: '' });
+    setValidationErrors({ courier: '', docNo: '' });
+  };
+
+  const closeDispatchPopup = () => {
+    setDispatchPopup({
+      isOpen: false,
+      slipId: '',
+      packingSlipNumber: ''
+    });
+    setDispatchData({ courier: '', docNo: '' });
+    setValidationErrors({ courier: '', docNo: '' });
+  };
+
+  const handleDispatchSubmit = async () => {
+    // Validate form fields
+    const errors = {
+      courier: !dispatchData.courier.trim() ? 'Courier is required' : '',
+      docNo: !dispatchData.docNo.trim() ? 'Doc.No is required' : ''
+    };
+    
+    setValidationErrors(errors);
+    
+    if (errors.courier || errors.docNo) {
+      return;
+    }
+
+    try {
+      console.log('Updating packing slip:', dispatchPopup.slipId, 'with data:', {
+        courier: dispatchData.courier,
+        docNo: dispatchData.docNo
+      });
+
+      // Update the packing slip with dispatch information
+      const response = await packingSlipAPI.updatePackingSlip(dispatchPopup.slipId, {
+        courier: dispatchData.courier,
+        docNo: dispatchData.docNo
+      });
+
+      console.log('Update response:', response.data);
+
+      // Update the local state immediately for better UX
+      const updatedSlips = packingSlips.map(slip => 
+        slip._id === dispatchPopup.slipId 
+          ? { ...slip, courier: dispatchData.courier, docNo: dispatchData.docNo }
+          : slip
+      );
+      
+      console.log('Updated slips:', updatedSlips);
+      setPackingSlips(updatedSlips);
+
+      // Show success message
+      console.log('Dispatch information updated successfully');
+
+      // Close popup first
+      closeDispatchPopup();
+    } catch (error: any) {
+      console.error('Error updating dispatch information:', error);
+      console.error('Error details:', error.response?.data);
+    }
+  };
+
   useEffect(() => {
     fetchPackingSlips();
   }, []);
@@ -93,6 +180,19 @@ const PackingSlipHistory: React.FC = () => {
   useEffect(() => {
     filterPackingSlips();
   }, [filterPackingSlips]);
+
+  // Update filtered list when packingSlips changes
+  useEffect(() => {
+    if (packingSlips.length > 0) {
+      console.log('PackingSlips changed, filtering...', packingSlips);
+      filterPackingSlips();
+    }
+  }, [packingSlips, filters]);
+
+  // Debug: Log filtered slips when they change
+  useEffect(() => {
+    console.log('FilteredSlips updated:', filteredSlips);
+  }, [filteredSlips]);
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -104,7 +204,7 @@ const PackingSlipHistory: React.FC = () => {
           className="bg-white rounded-xl shadow-lg p-8"
         >
           <h1 className="text-3xl font-bold text-gray-900 mb-8 text-center">
-            Allen Jorgio - Packing Slip History
+            Packing Slip History
           </h1>
 
           {/* Filters */}
@@ -209,6 +309,12 @@ const PackingSlipHistory: React.FC = () => {
                       Items Count
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Courier
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Doc.No
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
@@ -240,12 +346,34 @@ const PackingSlipHistory: React.FC = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <button
-                          onClick={() => downloadPDF(slip._id!, slip.packingSlipNumber)}
-                          className="text-primary-600 hover:text-primary-800 font-medium"
-                        >
-                          Download PDF
-                        </button>
+                        {slip.courier ? (
+                          <span className="text-gray-900">{slip.courier}</span>
+                        ) : (
+                          <span className="text-gray-400 italic">Not dispatched</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {slip.docNo ? (
+                          <span className="text-gray-900">{slip.docNo}</span>
+                        ) : (
+                          <span className="text-gray-400 italic">Not dispatched</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => downloadPDF(slip._id!, slip.packingSlipNumber)}
+                            className="text-primary-600 hover:text-primary-800 font-medium"
+                          >
+                            Download PDF
+                          </button>
+                          <button
+                            onClick={() => openDispatchPopup(slip._id!, slip.packingSlipNumber)}
+                            className="text-green-600 hover:text-green-800 font-medium"
+                          >
+                            Dispatch
+                          </button>
+                        </div>
                       </td>
                     </motion.tr>
                   ))}
@@ -255,6 +383,97 @@ const PackingSlipHistory: React.FC = () => {
           </div>
         </motion.div>
       </div>
+
+      {/* Dispatch Popup */}
+      {dispatchPopup.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="bg-white rounded-xl shadow-2xl p-6 w-96 max-w-md mx-4"
+          >
+            <div className="text-center mb-6">
+              <h3 className="text-xl font-bold text-gray-900">
+                Dispatch Information
+              </h3>
+            </div>
+
+            <div className="mb-4">
+              <p className="text-sm text-gray-600 mb-2">
+                Packing Slip: <span className="font-medium">{dispatchPopup.packingSlipNumber}</span>
+              </p>
+            </div>
+
+            <div className="space-y-4 mb-6">
+              <div className="flex justify-between items-center">
+                <label className="text-sm font-medium text-gray-700">
+                  Courier:
+                </label>
+                <input
+                  type="text"
+                  value={dispatchData.courier}
+                  onChange={(e) => {
+                    setDispatchData(prev => ({ ...prev, courier: e.target.value }));
+                    if (validationErrors.courier) {
+                      setValidationErrors(prev => ({ ...prev, courier: '' }));
+                    }
+                  }}
+                  placeholder="Enter courier name"
+                  className={`w-48 px-3 py-1 border rounded focus:outline-none focus:ring-1 ${
+                    validationErrors.courier 
+                      ? 'border-red-300 focus:ring-red-500' 
+                      : 'border-gray-300 focus:ring-blue-500'
+                  }`}
+                />
+              </div>
+              {validationErrors.courier && (
+                <p className="text-sm text-red-600 text-right">{validationErrors.courier}</p>
+              )}
+
+              <div className="flex justify-between items-center">
+                <label className="text-sm font-medium text-gray-700">
+                  Doc.No:
+                </label>
+                <input
+                  type="text"
+                  value={dispatchData.docNo}
+                  onChange={(e) => {
+                    setDispatchData(prev => ({ ...prev, docNo: e.target.value }));
+                    if (validationErrors.docNo) {
+                      setValidationErrors(prev => ({ ...prev, docNo: '' }));
+                    }
+                  }}
+                  placeholder="Enter document number"
+                  className={`w-48 px-3 py-1 border rounded focus:outline-none focus:ring-1 ${
+                    validationErrors.docNo 
+                      ? 'border-red-300 focus:ring-red-500' 
+                      : 'border-gray-300 focus:ring-blue-500'
+                  }`}
+                />
+              </div>
+              {validationErrors.docNo && (
+                <p className="text-sm text-red-600 text-right">{validationErrors.docNo}</p>
+              )}
+            </div>
+
+            <div className="flex justify-center space-x-3">
+              <button
+                onClick={closeDispatchPopup}
+                className="px-6 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Close
+              </button>
+              <button
+                onClick={handleDispatchSubmit}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Update Dispatch
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };

@@ -44,6 +44,8 @@ export const packingSlipAPI = {
   updatePackingSlip: (id: string, data: Partial<PackingSlip>) => api.put(`/packing-slips/${id}`, data),
   
   deletePackingSlip: (id: string) => api.delete(`/packing-slips/${id}`),
+  
+  getReceiverHistory: () => api.get('/packing-slips/receiver-history'),
 };
 
 export default api;

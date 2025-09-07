@@ -133,7 +133,7 @@ const CreateSample: React.FC = () => {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Production Sample Type
+                      Type
                     </label>
                     <select
                       value={sample.productionSampleType}
@@ -142,10 +142,10 @@ const CreateSample: React.FC = () => {
                       required
                     >
                       <option value="">Select Type</option>
-                      <option value="A">A</option>
-                      <option value="B">B</option>
-                      <option value="C">C</option>
-                      <option value="D">D</option>
+                      <option value="Paper Booklet">Paper Booklet</option>
+                      <option value="Hanger">Hanger</option>
+                      <option value="Export Booklet">Export Booklet</option>
+                      <option value="Swatch Card">Swatch Card</option>
                     </select>
                   </div>
 
@@ -255,6 +255,7 @@ const CreateSample: React.FC = () => {
                         <QRCodeCanvas
                           id={`qr-${sample.qrCodeId}`}
                           value={JSON.stringify({
+                            merchant: sample.merchant,
                             productionSampleType: sample.productionSampleType,
                             designNo: sample.designNo,
                             qrCodeId: sample.qrCodeId

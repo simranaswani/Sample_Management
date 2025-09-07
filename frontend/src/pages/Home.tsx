@@ -55,7 +55,7 @@ const Home: React.FC = () => {
               <AllenJorgioLogo size="lg" showSubtitle={false} />
             </div>
             <h2 className="text-2xl md:text-3xl font-semibold text-primary-600 mb-4">
-              Textile Sample Management System
+              Sample Management System
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
               Streamline your textile manufacturing workflow with QR code integration,
