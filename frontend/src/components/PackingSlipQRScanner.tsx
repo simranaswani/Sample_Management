@@ -96,7 +96,7 @@ const PackingSlipQRScanner: React.FC<PackingSlipQRScannerProps> = ({ items, setI
 
   const fetchSampleByQrCodeId = useCallback(async (qrCodeId: string, parsedData: any) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/samples`);
+      const response = await fetch(`/api/samples`);
       if (response.ok) {
         const samples = await response.json();
         const sample = samples.find((s: any) => s.qrCodeId === qrCodeId);
