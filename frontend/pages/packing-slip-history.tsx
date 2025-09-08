@@ -1,5 +1,5 @@
 import React from 'react';
-import PackingSlipHistory from '../src/pages/PackingSlipHistory';
+import PackingSlipHistory from '../src/components/PackingSlipHistory';
 
 export default function PackingSlipHistoryPage() {
   return <PackingSlipHistory />;
