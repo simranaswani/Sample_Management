@@ -118,8 +118,15 @@ const CreatePackingSlip: React.FC = () => {
 
       const response = await packingSlipAPI.createPackingSlip(packingSlipData);
       console.log('Created slip response:', response.data);
-      setCreatedSlip(response.data);
-      setShowSuccess(true);
+      
+      // Add null check for response data
+      if (response.data && response.data.items && Array.isArray(response.data.items)) {
+        setCreatedSlip(response.data);
+        setShowSuccess(true);
+      } else {
+        console.error('Invalid response data structure:', response.data);
+        alert('Error: Invalid response from server. Please try again.');
+      }
       
       // Reset form
       setFormData({
@@ -140,6 +147,7 @@ const CreatePackingSlip: React.FC = () => {
   const downloadPDF = async () => {
     if (!createdSlip?._id) {
       console.error('No created slip ID found');
+      alert('No packing slip data available for download.');
       return;
     }
 
@@ -147,18 +155,26 @@ const CreatePackingSlip: React.FC = () => {
       console.log('Downloading PDF for slip ID:', createdSlip._id);
       const response = await packingSlipAPI.generatePDF(createdSlip._id);
       console.log('PDF response:', response);
-      console.log('Response data size:', response.data.size);
+      
+      // Check if response data exists and is valid
+      if (!response.data) {
+        throw new Error('No PDF data received from server');
+      }
+      
+      console.log('Response data size:', response.data.size || 'unknown');
       
       const blob = new Blob([response.data], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `packing-slip-${createdSlip.packingSlipNumber}.pdf`;
+      link.download = `packing-slip-${createdSlip.packingSlipNumber || 'unknown'}.pdf`;
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error downloading PDF:', error);
-      alert('Error downloading PDF. Please try again.');
+      alert(`Error downloading PDF: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`);
     }
   };
 
@@ -363,7 +379,7 @@ const CreatePackingSlip: React.FC = () => {
               <div className="text-green-700 mb-4">
                 <p>Packing Slip Number: {createdSlip.packingSlipNumber}</p>
                 <p>Receiver: {createdSlip.receiverName}</p>
-                <p>Items: {createdSlip.items.length}</p>
+                <p>Items: {createdSlip.items?.length || 0}</p>
               </div>
               <div className="flex gap-4">
                 <button

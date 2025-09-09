@@ -21,16 +21,28 @@ const StockStatus: React.FC = () => {
     setLoading(true);
     try {
       const response = await sampleAPI.getStockSummary(filters);
-      setStockData(response.data);
       
-      // Calculate summary
-      const totalPieces = response.data.reduce((sum: number, item: StockSummary) => sum + item.totalPieces, 0);
-      const totalSamples = response.data.length;
-      const lastUpdated = new Date().toLocaleString();
-      
-      setSummary({ totalSamples, totalPieces, lastUpdated });
+      // Add null check for response data
+      if (response.data && Array.isArray(response.data)) {
+        setStockData(response.data);
+        
+        // Calculate summary with null checks
+        const totalPieces = response.data.reduce((sum: number, item: StockSummary) => {
+          return sum + (item?.totalPieces || 0);
+        }, 0);
+        const totalSamples = response.data.length;
+        const lastUpdated = new Date().toLocaleString();
+        
+        setSummary({ totalSamples, totalPieces, lastUpdated });
+      } else {
+        console.error('Invalid response data structure:', response.data);
+        setStockData([]);
+        setSummary({ totalSamples: 0, totalPieces: 0, lastUpdated: new Date().toLocaleString() });
+      }
     } catch (error) {
       console.error('Error fetching stock data:', error);
+      setStockData([]);
+      setSummary({ totalSamples: 0, totalPieces: 0, lastUpdated: new Date().toLocaleString() });
     } finally {
       setLoading(false);
     }
@@ -185,25 +197,25 @@ const StockStatus: React.FC = () => {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {stockData.map((item, index) => (
                     <motion.tr
-                      key={`${item._id.productionSampleType}-${item._id.designNo}`}
+                      key={`${item?._id?.productionSampleType || 'unknown'}-${item?._id?.designNo || 'unknown'}`}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.4, delay: index * 0.05 }}
                       className="hover:bg-gray-50"
                     >
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {item.merchant}
+                        {item?.merchant || 'N/A'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {item._id.designNo}
+                        {item?._id?.designNo || 'N/A'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          {item.totalPieces}
+                          {item?.totalPieces || 0}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {new Date(item.dateCreated).toLocaleDateString()}
+                        {item?.dateCreated ? new Date(item.dateCreated).toLocaleDateString() : 'N/A'}
                       </td>
                     </motion.tr>
                   ))}

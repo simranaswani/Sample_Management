@@ -11,6 +11,7 @@ const ViewQRs: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSample, setSelectedSample] = useState<Sample | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [deletingSample, setDeletingSample] = useState<string | null>(null);
 
   const fetchSamples = async () => {
     setLoading(true);
@@ -161,6 +162,46 @@ const ViewQRs: React.FC = () => {
     });
   };
 
+  const deleteSample = async (sample: Sample) => {
+    if (!sample._id) {
+      console.error('No sample ID found for deletion');
+      return;
+    }
+
+    const confirmDelete = window.confirm(
+      `Are you sure you want to delete this QR code?\n\n` +
+      `Merchant: ${sample.merchant}\n` +
+      `Design No: ${sample.designNo}\n` +
+      `Type: ${sample.productionSampleType}\n\n` +
+      `This action cannot be undone.`
+    );
+
+    if (!confirmDelete) return;
+
+    setDeletingSample(sample._id);
+    
+    try {
+      await sampleAPI.deleteSample(sample._id);
+      
+      // Remove from local state
+      setSamples(prev => prev.filter(s => s._id !== sample._id));
+      setFilteredSamples(prev => prev.filter(s => s._id !== sample._id));
+      
+      // Close modal if the deleted sample was selected
+      if (selectedSample?._id === sample._id) {
+        setShowModal(false);
+        setSelectedSample(null);
+      }
+      
+      alert('QR code deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting sample:', error);
+      alert('Error deleting QR code. Please try again.');
+    } finally {
+      setDeletingSample(null);
+    }
+  };
+
   useEffect(() => {
     fetchSamples();
   }, []);
@@ -238,7 +279,7 @@ const ViewQRs: React.FC = () => {
                     <div className="text-xs text-gray-500 mb-3">
                       {sample.productionSampleType}
                     </div>
-                    <div className="flex justify-center space-x-1">
+                    <div className="flex justify-center space-x-1 flex-wrap gap-1">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -255,7 +296,7 @@ const ViewQRs: React.FC = () => {
                         }}
                         className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 transition-colors"
                       >
-                        Print Sticker
+                        Print
                       </button>
                       <button
                         onClick={(e) => {
@@ -265,6 +306,16 @@ const ViewQRs: React.FC = () => {
                         className="text-xs bg-gray-600 text-white px-2 py-1 rounded hover:bg-gray-700 transition-colors"
                       >
                         Details
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteSample(sample);
+                        }}
+                        disabled={deletingSample === sample._id}
+                        className="text-xs bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700 disabled:opacity-50 transition-colors"
+                      >
+                        {deletingSample === sample._id ? 'Deleting...' : 'Delete'}
                       </button>
                     </div>
                   </div>
@@ -332,7 +383,7 @@ const ViewQRs: React.FC = () => {
                 </div>
               </div>
               
-              <div className="flex justify-center space-x-3">
+              <div className="flex justify-center space-x-3 flex-wrap gap-2">
                 <button
                   onClick={() => downloadQR(selectedSample)}
                   className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
@@ -344,6 +395,16 @@ const ViewQRs: React.FC = () => {
                   className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
                 >
                   Print Sticker
+                </button>
+                <button
+                  onClick={() => {
+                    deleteSample(selectedSample);
+                    setShowModal(false);
+                  }}
+                  disabled={deletingSample === selectedSample._id}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 transition-colors"
+                >
+                  {deletingSample === selectedSample._id ? 'Deleting...' : 'Delete QR'}
                 </button>
                 <button
                   onClick={() => setShowModal(false)}

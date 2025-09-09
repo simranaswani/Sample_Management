@@ -253,14 +253,12 @@ const CreateSample: React.FC = () => {
                     <div className="text-center">
                       <div className="mb-4">
                         <QRCodeCanvas
-                          id={`qr-${sample.qrCodeId}`}
-                          value={JSON.stringify({
-                            merchant: sample.merchant,
-                            productionSampleType: sample.productionSampleType,
-                            designNo: sample.designNo,
-                            qrCodeId: sample.qrCodeId
-                          })}
-                          size={120}
+                           id={`qr-${sample.designNo}-${sample.merchant}`} 
+                           value="ALH004"// keep it short
+                           size={180}
+                           level="M"
+                           includeMargin={true}
+                           marginSize={5}
                         />
                       </div>
                       <div className="text-sm font-medium text-gray-800 mb-2">
