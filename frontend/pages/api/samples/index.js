@@ -26,6 +26,8 @@ export default async function handler(req, res) {
           errors: []
         };
 
+        const createdSamples = [];
+        
         for (let i = 0; i < samples.length; i++) {
           const sampleData = samples[i];
           try {
@@ -43,21 +45,14 @@ export default async function handler(req, res) {
             // Generate QR code ID
             const qrCodeId = uuidv4();
 
-            // Create QR data
-            const qrData = {
-              merchant: sampleData.merchant,
-              productionSampleType: sampleData.productionSampleType,
-              designNo: sampleData.designNo,
-              qrCodeId: qrCodeId
-            };
-
             // Create new sample
             const newSample = new Sample({
               ...sampleData,
               qrCodeId: qrCodeId
             });
 
-            await newSample.save();
+            const savedSample = await newSample.save();
+            createdSamples.push(savedSample);
             results.created++;
           } catch (error) {
             console.error(`Error processing sample ${i + 1}:`, error);
@@ -70,7 +65,8 @@ export default async function handler(req, res) {
 
         res.status(201).json({
           message: 'Bulk import completed',
-          results: results
+          results: results,
+          data: createdSamples
         });
       } else {
         // Handle single sample creation

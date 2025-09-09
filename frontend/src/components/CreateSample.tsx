@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { sampleAPI } from '../services/api';
 import { Sample } from '../types';
-import { QRCodeCanvas } from 'qrcode.react';
+import MicroQRCode from './MicroQR';
 import { Plus, Trash2, Download, CheckCircle, X } from 'lucide-react';
 
 const CreateSample: React.FC = () => {
@@ -20,6 +20,21 @@ const CreateSample: React.FC = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [merchantDropdownOpen, setMerchantDropdownOpen] = useState<{ [key: number]: boolean }>({});
   const [merchantSearch, setMerchantSearch] = useState<{ [key: number]: string }>({});
+
+  // Helper function to map production sample types to codes
+  const getTypeCode = (type: string): string => {
+    const typeMap: { [key: string]: string } = {
+      'Hanger': 'HG',
+      'Paper Booklet': 'PB',
+      'Export Booklet': 'EB',
+      'Swatch Card': 'SC'
+    };
+    return typeMap[type] || type; // fallback to original type if not found
+  };
+  const getQRData = (sample: Sample) => {
+    const typeCode = getTypeCode(sample.productionSampleType);
+    return `${sample.merchant}_${sample.designNo}_${typeCode}`;
+  };
 
   // Common merchants list for dropdown
   const commonMerchants = [
@@ -85,9 +100,44 @@ const CreateSample: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      const response = await sampleAPI.createSamples(samples);
-      setSubmittedSamples(response.data);
-      setShowSuccess(true);
+      // Validate samples before submission
+      const validSamples = samples.filter(sample => 
+        sample.merchant.trim() !== '' && 
+        sample.productionSampleType.trim() !== '' && 
+        sample.designNo.trim() !== '' && 
+        sample.pieces > 0
+      );
+
+      if (validSamples.length === 0) {
+        alert('Please fill in all required fields for at least one sample.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (validSamples.length !== samples.length) {
+        const invalidCount = samples.length - validSamples.length;
+        if (!confirm(`${invalidCount} sample(s) have incomplete information and will be skipped. Continue with ${validSamples.length} valid sample(s)?`)) {
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
+      const response = await sampleAPI.createSamples(validSamples);
+      
+      // Handle the API response structure
+      if (response.data.results && response.data.results.created > 0) {
+        // For bulk import, use the created samples from the response
+        const validSamples = (response.data.data || []).filter((sample: any) => sample != null);
+        setSubmittedSamples(validSamples);
+        setShowSuccess(true);
+      } else {
+        // Handle single sample creation
+        const singleSample = response.data.sample;
+        if (singleSample) {
+          setSubmittedSamples([singleSample]);
+          setShowSuccess(true);
+        }
+      }
       setSamples([{
         merchant: '',
         productionSampleType: '',
@@ -103,11 +153,13 @@ const CreateSample: React.FC = () => {
     }
   };
 
-  const downloadQR = (qrCodeId: string, designNo: string) => {
-    const canvas = document.getElementById(`qr-${qrCodeId}`) as HTMLCanvasElement;
+  const downloadQR = (sample: Sample, qrId?: string) => {
+    const id = qrId || sample.qrCodeId || sample._id || 'unknown';
+    const canvas = document.getElementById(`qr-${id}`) as HTMLCanvasElement;
     if (canvas) {
       const link = document.createElement("a");
-      link.download = `qr-${designNo}-${qrCodeId}.png`;
+      const qrData = getQRData(sample);
+      link.download = `qr-${qrData}.png`;
       link.href = canvas.toDataURL("image/png", 1.0); // high-quality export
       link.click();
     }
@@ -246,7 +298,7 @@ const CreateSample: React.FC = () => {
                       value={sample.pieces}
                       onChange={(e) => updateSample(index, 'pieces', parseInt(e.target.value) || 0)}
                       min="1"
-                      className="input-optimized-sm px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="input-optimized px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       required
                     />
                   </div>
@@ -322,18 +374,19 @@ const CreateSample: React.FC = () => {
                 </button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {submittedSamples.map((sample) => (
-                  <div key={sample.qrCodeId} className="bg-white p-6 rounded-xl border border-green-200 shadow-sm">
-                    <div className="text-center">
-                      <div className="mb-4">
-                        <QRCodeCanvas
-                          id={`qr-${sample.qrCodeId}`} 
-                          value={sample.qrCodeId} // keep QR value short & unique
-                          size={200}              // a bit bigger for clarity
-                            level="M"               // medium error correction (less dense)
-                          
-                        />
-                      </div>
+                {submittedSamples.filter((sample: any) => sample != null).map((sample, index) => {
+                  // Generate a fallback ID if qrCodeId is missing
+                  const qrId = sample.qrCodeId || sample._id || `fallback-${index}`;
+                  return (
+                    <div key={qrId} className="bg-white p-6 rounded-xl border border-green-200 shadow-sm">
+                      <div className="text-center">
+                        <div className="mb-4">
+                          <MicroQRCode
+                            id={`qr-${qrId}`} 
+                            value={getQRData(sample)}
+                            size={200}
+                          />
+                        </div>
                       <div className="text-sm font-medium text-gray-800 mb-2">
                         {sample.productionSampleType} - {sample.designNo}
                       </div>
@@ -341,7 +394,7 @@ const CreateSample: React.FC = () => {
                         {sample.pieces} pieces
                       </div>
                       <button
-                        onClick={() => downloadQR(sample.qrCodeId, sample.designNo)}
+                        onClick={() => downloadQR(sample, qrId)}
                         className="flex items-center space-x-2 mx-auto px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
                       >
                         <Download className="w-4 h-4" />
@@ -349,7 +402,8 @@ const CreateSample: React.FC = () => {
                       </button>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </motion.div>
           )}

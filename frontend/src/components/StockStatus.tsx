@@ -28,7 +28,7 @@ const StockStatus: React.FC = () => {
       // Add null check for response data
       if (response.data && Array.isArray(response.data)) {
         setStockData(response.data);
-        applyFilters(response.data);
+        // Don't apply filters here, let the separate useEffect handle it
       } else {
         console.error('Invalid response data structure:', response.data);
         setStockData([]);
@@ -48,6 +48,13 @@ const StockStatus: React.FC = () => {
   const applyFilters = useCallback((data: StockSummary[]) => {
     let filtered = data;
 
+    // Apply merchant filter (client-side for additional filtering)
+    if (filters.merchant) {
+      filtered = filtered.filter(item =>
+        item?.merchant?.toLowerCase().includes(filters.merchant.toLowerCase())
+      );
+    }
+
     // Apply design number filter
     if (filters.designNo) {
       filtered = filtered.filter(item =>
@@ -65,7 +72,7 @@ const StockStatus: React.FC = () => {
     const lastUpdated = new Date().toLocaleString();
     
     setSummary({ totalSamples, totalPieces, lastUpdated });
-  }, [filters.designNo]);
+  }, [filters.merchant, filters.designNo]);
 
   const handleFilterChange = (field: string, value: string) => {
     setFilters(prev => ({ ...prev, [field]: value }));
@@ -79,6 +86,7 @@ const StockStatus: React.FC = () => {
     fetchStockData();
   }, [fetchStockData]);
 
+  // Apply filters when stock data or filter values change
   useEffect(() => {
     if (stockData.length > 0) {
       applyFilters(stockData);

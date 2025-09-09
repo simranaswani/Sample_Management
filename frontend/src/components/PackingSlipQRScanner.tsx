@@ -193,6 +193,43 @@ const PackingSlipQRScanner: React.FC<PackingSlipQRScannerProps> = ({ items, setI
     }
   }, []);
 
+  const fetchSampleByDesignAndMerchant = useCallback(async (designNo: string, merchantCode: string, tempQrData: any) => {
+    try {
+      const response = await fetch(`/api/samples`);
+      if (response.ok) {
+        const samples = await response.json();
+        // Find sample by design number and merchant (try both exact match and partial match)
+        const sample = samples.find((s: any) => 
+          s.designNo === designNo && 
+          (s.merchant === merchantCode || 
+           s.merchant.toLowerCase().includes(merchantCode.toLowerCase()) ||
+           merchantCode.toLowerCase().includes(s.merchant.toLowerCase()))
+        );
+        
+        if (sample) {
+          // Use the actual sample data from database
+          const completeData = {
+            merchant: sample.merchant,
+            productionSampleType: sample.productionSampleType,
+            designNo: sample.designNo,
+            qrCodeId: sample.qrCodeId
+          };
+          setDetectedQrData(completeData);
+        } else {
+          // If sample not found in database, use the parsed data as is
+          setDetectedQrData(tempQrData);
+        }
+      } else {
+        // If API call fails, use the parsed data as is
+        setDetectedQrData(tempQrData);
+      }
+    } catch (error) {
+      console.error('Error fetching sample data:', error);
+      // If there's an error, use the parsed data as is
+      setDetectedQrData(tempQrData);
+    }
+  }, []);
+
   const closeAndStop = useCallback(() => {
     if (videoRef.current?.srcObject) {
       const stream = videoRef.current.srcObject as MediaStream;
@@ -225,7 +262,12 @@ const PackingSlipQRScanner: React.FC<PackingSlipQRScannerProps> = ({ items, setI
           if (result) {
             setScanning(false);
             try {
-              const parsed = JSON.parse(result.getText());
+              const qrText = result.getText();
+              let parsed: any = null;
+              
+              // Try to parse as JSON first (for backward compatibility)
+              try {
+                parsed = JSON.parse(qrText);
               if (parsed.qrCodeId && parsed.designNo) {
                 // If merchant is missing from QR code, try to fetch it from the database
                 if (!parsed.merchant) {
@@ -233,12 +275,44 @@ const PackingSlipQRScanner: React.FC<PackingSlipQRScannerProps> = ({ items, setI
                 } else {
                   setDetectedQrData(parsed);
                 }
-              } else {
-                toast.error("Invalid QR code", { autoClose: 2000 });
-                setTimeout(() => setScanning(true), 2000);
+                  return;
+                }
+              } catch (jsonError) {
+                // If JSON parsing fails, try the new format: TypeCode|DesignNo|MerchantCode
+                const parts = qrText.split('|');
+                if (parts.length === 3) {
+                  const [typeCode, designNo, merchantCode] = parts;
+                  
+                  // Map type codes back to full names
+                  const typeMap: { [key: string]: string } = {
+                    'HG': 'Hanger',
+                    'PB': 'Paper Booklet',
+                    'EB': 'Export Booklet',
+                    'SC': 'Swatch Card'
+                  };
+                  
+                  const productionSampleType = typeMap[typeCode] || typeCode;
+                  
+                  // Create a temporary QR data object
+                  const tempQrData = {
+                    merchant: merchantCode, // This will be updated from database
+                    productionSampleType: productionSampleType,
+                    designNo: designNo,
+                    qrCodeId: `${merchantCode}_${designNo}_${typeCode}` // Generate a temporary ID
+                  };
+                  
+                  // Try to fetch the actual sample data from database using designNo and merchant
+                  fetchSampleByDesignAndMerchant(designNo, merchantCode, tempQrData);
+                  return;
+                }
               }
-            } catch {
-              toast.error("Not valid JSON QR", { autoClose: 2000 });
+              
+              // If we get here, the QR code format is not recognized
+              toast.error("Invalid QR code format", { autoClose: 2000 });
+              setTimeout(() => setScanning(true), 2000);
+            } catch (error) {
+              console.error("QR parsing error:", error);
+              toast.error("Error processing QR code", { autoClose: 2000 });
               setTimeout(() => setScanning(true), 2000);
             }
           }
@@ -266,7 +340,7 @@ const PackingSlipQRScanner: React.FC<PackingSlipQRScannerProps> = ({ items, setI
         codeReader.current = null;
       };
     }
-  }, [scanning, fetchSampleByQrCodeId]);
+  }, [scanning, fetchSampleByQrCodeId, fetchSampleByDesignAndMerchant]);
 
   return (
      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">

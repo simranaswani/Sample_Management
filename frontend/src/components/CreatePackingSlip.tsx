@@ -120,8 +120,8 @@ const CreatePackingSlip: React.FC = () => {
       console.log('Created slip response:', response.data);
       
       // Add null check for response data
-      if (response.data && response.data.items && Array.isArray(response.data.items)) {
-        setCreatedSlip(response.data);
+      if (response.data && response.data.packingSlip && response.data.packingSlip.items && Array.isArray(response.data.packingSlip.items)) {
+        setCreatedSlip(response.data.packingSlip);
         setShowSuccess(true);
       } else {
         console.error('Invalid response data structure:', response.data);

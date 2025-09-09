@@ -28,14 +28,21 @@ export default async function handler(req, res) {
         const key = `${sample.merchant}-${sample.designNo}`;
         if (!acc[key]) {
           acc[key] = {
+            _id: {
+              productionSampleType: sample.productionSampleType,
+              designNo: sample.designNo
+            },
             merchant: sample.merchant,
-            designNo: sample.designNo,
-            productionSampleType: sample.productionSampleType,
             totalPieces: 0,
+            qrCodes: [],
+            dateCreated: sample.dateCreated,
             samples: []
           };
         }
         acc[key].totalPieces += sample.pieces;
+        if (sample.qrCodeId) {
+          acc[key].qrCodes.push(sample.qrCodeId);
+        }
         acc[key].samples.push(sample);
         return acc;
       }, {});
@@ -44,7 +51,7 @@ export default async function handler(req, res) {
         if (a.merchant !== b.merchant) {
           return a.merchant.localeCompare(b.merchant);
         }
-        return a.designNo.localeCompare(b.designNo);
+        return a._id.designNo.localeCompare(b._id.designNo);
       });
 
       res.status(200).json(result);

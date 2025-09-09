@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { sampleAPI } from '../services/api';
 import { Sample } from '../types';
-import { QRCodeCanvas } from 'qrcode.react';
+import MicroQRCode from './MicroQR';
 
 const ViewQRs: React.FC = () => {
   const [samples, setSamples] = useState<Sample[]>([]);
@@ -47,105 +47,121 @@ const ViewQRs: React.FC = () => {
     setShowModal(true);
   };
 
-  const downloadQR = (sample: Sample) => {
-    const canvas = document.getElementById(`qr-${sample.qrCodeId}`) as HTMLCanvasElement;
-    if (canvas) {
-      const link = document.createElement('a');
-      link.download = `qr-${sample.designNo}-${sample.qrCodeId}.png`;
-      link.href = canvas.toDataURL();
-      link.click();
-    }
-  };
+// Type → Short Code Map
+const typeCodeMap: Record<string, string> = {
+  "Hanger": "HG",
+  "Paper Booklet": "PB",
+  "Export Booklet": "EB",
+  "Swatch Card": "SC"
+};
 
-  const printSticker = (sample: Sample) => {
-    // Create a new window for printing
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
+// Helper: Get short code for type
+const getTypeCode = (type: string): string => {
+  return typeCodeMap[type] || type;
+};
 
-    // Get QR code data URL
-    const canvas = document.getElementById(`qr-${sample.qrCodeId}`) as HTMLCanvasElement;
-    const qrDataURL = canvas ? canvas.toDataURL() : '';
+// Helper: Generate clean QR data
+const getQRData = (sample: Sample) => {
+  const typeCode = getTypeCode(sample.productionSampleType);
+  const merchantCode = sample.merchant.replace(/\s+/g, '').slice(0, 6); // remove spaces, shorten
+  return `${typeCode}|${sample.designNo}|${merchantCode}`;
+};
 
-    // Create sticker HTML
-    const stickerHTML = `
+// Download QR as PNG
+const downloadQR = (sample: Sample) => {
+  const canvas = document.getElementById(`qr-${sample.qrCodeId}`) as HTMLCanvasElement;
+  if (canvas) {
+    const link = document.createElement('a');
+    const qrData = getQRData(sample);
+    link.download = `qr-${qrData}.png`;
+    link.href = canvas.toDataURL();
+    link.click();
+  }
+};
+
+// Print Sticker with QR + text
+const printSticker = (sample: Sample) => {
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) return;
+
+  const canvas = document.getElementById(`qr-${sample.qrCodeId}`) as HTMLCanvasElement;
+  const qrDataURL = canvas ? canvas.toDataURL() : '';
+
+  const qrData = getQRData(sample);
+  const stickerHTML = `
 <!DOCTYPE html>
 <html>
 <head>
-  <title>QR Sticker - ${sample.designNo}</title>
+  <title>QR Sticker - ${qrData}</title>
   <style>
     @page {
-      size: 2in 1.2in;
+      size: 2in 1in;
       margin: 0;
     }
     body {
       margin: 0;
-      padding: 6px;
+      padding: 4px;
       font-family: Arial, sans-serif;
       width: 2in;
-      height: 1.2in;
+      height: 1in;
       box-sizing: border-box;
     }
     .sticker {
-      position: relative;   /* allows absolute positioning inside */
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
       width: 100%;
       height: 100%;
       border: 1px solid #000;
-      display: flex;
-      flex-direction: column;
+      padding: 4px;
       box-sizing: border-box;
     }
+    .text {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
     .merchant {
-      font-size: 14px;
+      font-size: 13px;
       font-weight: bold;
       margin: 0;
-      line-height: 1;
+      line-height: 1.2;
     }
     .design-no {
-      font-size: 14px;
+      font-size: 13px;
       margin: 2px 0 0 0;
-      line-height: 1;
+      line-height: 1.2;
       color: #000;
     }
     .qr-code {
-      position: absolute;   /* take QR out of flow */
-      bottom: 2px;          /* gap from bottom border */
-      right: 2px;           /* gap from right border */
-      width: 78px;
-      height: 78px;
+      width: 70px;
+      height: 70px;
     }
   </style>
 </head>
 <body>
   <div class="sticker">
-    <div class="merchant">${sample.merchant}</div>
-    <div class="design-no">${sample.designNo}</div>
+    <div class="text">
+      <div class="merchant">${sample.merchant}</div>
+      <div class="design-no">${sample.designNo}</div>
+    </div>
     <img src="${qrDataURL}" alt="QR Code" class="qr-code" />
   </div>
 </body>
 </html>
 
-    `;
+  `;
 
-    printWindow.document.write(stickerHTML);
-    printWindow.document.close();
-    
-    // Wait for image to load then print
-    printWindow.onload = () => {
-      setTimeout(() => {
-        printWindow.print();
-        printWindow.close();
-      }, 500);
-    };
-  };
+  printWindow.document.write(stickerHTML);
+  printWindow.document.close();
 
-  const getQRData = (sample: Sample) => {
-    return JSON.stringify({
-      merchant: sample.merchant,
-      productionSampleType: sample.productionSampleType,
-      designNo: sample.designNo,
-      qrCodeId: sample.qrCodeId
-    });
+  printWindow.onload = () => {
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 500);
   };
+};
 
   const showDeleteConfirmation = (sample: Sample) => {
     setSampleToDelete(sample);
@@ -252,7 +268,7 @@ const ViewQRs: React.FC = () => {
                 >
                   <div className="text-center">
                     <div className="mb-4">
-                      <QRCodeCanvas
+                      <MicroQRCode
                         id={`qr-${sample.qrCodeId}`}
                         value={getQRData(sample)}
                         size={120}
@@ -334,7 +350,8 @@ const ViewQRs: React.FC = () => {
               </h3>
               
               <div className="text-center mb-6">
-                <QRCodeCanvas
+                <MicroQRCode
+                  id={`qr-modal-${selectedSample.qrCodeId}`}
                   value={getQRData(selectedSample)}
                   size={200}
                 />
