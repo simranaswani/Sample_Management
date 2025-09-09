@@ -18,6 +18,22 @@ const CreateSample: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedSamples, setSubmittedSamples] = useState<Sample[]>([]);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [merchantDropdownOpen, setMerchantDropdownOpen] = useState<{ [key: number]: boolean }>({});
+  const [merchantSearch, setMerchantSearch] = useState<{ [key: number]: string }>({});
+
+  // Common merchants list for dropdown
+  const commonMerchants = [
+    'Allen Jorgio',
+    'Textile Corp',
+    'Fashion House',
+    'Design Studio',
+    'Fabric World',
+    'Style Co',
+    'Trendy Textiles',
+    'Modern Fabrics',
+    'Elite Designs',
+    'Premium Textiles'
+  ];
 
   const addSample = () => {
     setSamples([...samples, {
@@ -39,6 +55,29 @@ const CreateSample: React.FC = () => {
     const updatedSamples = [...samples];
     updatedSamples[index] = { ...updatedSamples[index], [field]: value };
     setSamples(updatedSamples);
+  };
+
+  const handleMerchantSearch = (index: number, value: string) => {
+    setMerchantSearch(prev => ({ ...prev, [index]: value }));
+    updateSample(index, 'merchant', value);
+    setMerchantDropdownOpen(prev => ({ ...prev, [index]: true }));
+  };
+
+  const handleMerchantSelect = (index: number, merchant: string) => {
+    updateSample(index, 'merchant', merchant);
+    setMerchantSearch(prev => ({ ...prev, [index]: merchant }));
+    setMerchantDropdownOpen(prev => ({ ...prev, [index]: false }));
+  };
+
+  const toggleMerchantDropdown = (index: number) => {
+    setMerchantDropdownOpen(prev => ({ ...prev, [index]: !prev[index] }));
+  };
+
+  const getFilteredMerchants = (index: number) => {
+    const searchTerm = merchantSearch[index] || '';
+    return commonMerchants.filter(merchant =>
+      merchant.toLowerCase().includes(searchTerm.toLowerCase())
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -67,9 +106,9 @@ const CreateSample: React.FC = () => {
   const downloadQR = (qrCodeId: string, designNo: string) => {
     const canvas = document.getElementById(`qr-${qrCodeId}`) as HTMLCanvasElement;
     if (canvas) {
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.download = `qr-${designNo}-${qrCodeId}.png`;
-      link.href = canvas.toDataURL();
+      link.href = canvas.toDataURL("image/png", 1.0); // high-quality export
       link.click();
     }
   };
@@ -122,13 +161,48 @@ const CreateSample: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Merchant
                     </label>
-                    <input
-                      type="text"
-                      value={sample.merchant}
-                      onChange={(e) => updateSample(index, 'merchant', e.target.value)}
-                      className="input-optimized px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required
-                    />
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={merchantSearch[index] || sample.merchant}
+                        onChange={(e) => handleMerchantSearch(index, e.target.value)}
+                        onFocus={() => setMerchantDropdownOpen(prev => ({ ...prev, [index]: true }))}
+                        placeholder="Type to search merchants..."
+                        className="input-optimized px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => toggleMerchantDropdown(index)}
+                        className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                      
+                      {/* Dropdown */}
+                      {merchantDropdownOpen[index] && (
+                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
+                          {getFilteredMerchants(index).length > 0 ? (
+                            getFilteredMerchants(index).map((merchant) => (
+                              <button
+                                key={merchant}
+                                type="button"
+                                onClick={() => handleMerchantSelect(index, merchant)}
+                                className="w-full px-3 py-2 text-left text-sm text-gray-900 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                              >
+                                {merchant}
+                              </button>
+                            ))
+                          ) : (
+                            <div className="px-3 py-2 text-sm text-gray-500">
+                              No merchants found
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div>
@@ -253,12 +327,11 @@ const CreateSample: React.FC = () => {
                     <div className="text-center">
                       <div className="mb-4">
                         <QRCodeCanvas
-                           id={`qr-${sample.designNo}-${sample.merchant}`} 
-                           value="ALH004"// keep it short
-                           size={180}
-                           level="M"
-                           includeMargin={true}
-                           marginSize={5}
+                          id={`qr-${sample.qrCodeId}`} 
+                          value={sample.qrCodeId} // keep QR value short & unique
+                          size={200}              // a bit bigger for clarity
+                            level="M"               // medium error correction (less dense)
+                          
                         />
                       </div>
                       <div className="text-sm font-medium text-gray-800 mb-2">

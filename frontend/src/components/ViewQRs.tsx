@@ -12,6 +12,8 @@ const ViewQRs: React.FC = () => {
   const [selectedSample, setSelectedSample] = useState<Sample | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [deletingSample, setDeletingSample] = useState<string | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [sampleToDelete, setSampleToDelete] = useState<Sample | null>(null);
 
   const fetchSamples = async () => {
     setLoading(true);
@@ -66,7 +68,7 @@ const ViewQRs: React.FC = () => {
 
     // Create sticker HTML
     const stickerHTML = `
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
   <title>QR Sticker - ${sample.designNo}</title>
@@ -84,6 +86,7 @@ const ViewQRs: React.FC = () => {
       box-sizing: border-box;
     }
     .sticker {
+      position: relative;   /* allows absolute positioning inside */
       width: 100%;
       height: 100%;
       border: 1px solid #000;
@@ -91,53 +94,35 @@ const ViewQRs: React.FC = () => {
       flex-direction: column;
       box-sizing: border-box;
     }
-    .top-half {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: left;
-      border-bottom: 1px solid #000; /* horizontal center line */
-      text-align: center;
-      padding: 2px;
-    }
-    .bottom-half {
-      flex: 1;
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-      padding: 2px;
-    }
     .merchant {
-      font-size: 22px;
+      font-size: 14px;
       font-weight: bold;
-      word-wrap: break-word;
-      overflow-wrap: break-word;
+      margin: 0;
+      line-height: 1;
     }
     .design-no {
-      font-size: 20px;
+      font-size: 14px;
+      margin: 2px 0 0 0;
+      line-height: 1;
       color: #000;
-      word-wrap: break-word;
-      overflow-wrap: break-word;
     }
     .qr-code {
-      width: 45px;
-      height: 45px;
+      position: absolute;   /* take QR out of flow */
+      bottom: 2px;          /* gap from bottom border */
+      right: 2px;           /* gap from right border */
+      width: 78px;
+      height: 78px;
     }
   </style>
 </head>
 <body>
   <div class="sticker">
-    <div class="top-half">
-      <div class="merchant">${sample.merchant}</div>
-    </div>
-    <div class="bottom-half">
-      <div class="design-no">${sample.designNo}</div>
-      <img src="${qrDataURL}" alt="QR Code" class="qr-code" />
-    </div>
+    <div class="merchant">${sample.merchant}</div>
+    <div class="design-no">${sample.designNo}</div>
+    <img src="${qrDataURL}" alt="QR Code" class="qr-code" />
   </div>
 </body>
 </html>
-
 
     `;
 
@@ -162,44 +147,47 @@ const ViewQRs: React.FC = () => {
     });
   };
 
-  const deleteSample = async (sample: Sample) => {
-    if (!sample._id) {
+  const showDeleteConfirmation = (sample: Sample) => {
+    setSampleToDelete(sample);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!sampleToDelete?._id) {
       console.error('No sample ID found for deletion');
       return;
     }
 
-    const confirmDelete = window.confirm(
-      `Are you sure you want to delete this QR code?\n\n` +
-      `Merchant: ${sample.merchant}\n` +
-      `Design No: ${sample.designNo}\n` +
-      `Type: ${sample.productionSampleType}\n\n` +
-      `This action cannot be undone.`
-    );
-
-    if (!confirmDelete) return;
-
-    setDeletingSample(sample._id);
+    setDeletingSample(sampleToDelete._id);
     
     try {
-      await sampleAPI.deleteSample(sample._id);
+      await sampleAPI.deleteSample(sampleToDelete._id);
       
       // Remove from local state
-      setSamples(prev => prev.filter(s => s._id !== sample._id));
-      setFilteredSamples(prev => prev.filter(s => s._id !== sample._id));
+      setSamples(prev => prev.filter(s => s._id !== sampleToDelete._id));
+      setFilteredSamples(prev => prev.filter(s => s._id !== sampleToDelete._id));
       
       // Close modal if the deleted sample was selected
-      if (selectedSample?._id === sample._id) {
+      if (selectedSample?._id === sampleToDelete._id) {
         setShowModal(false);
         setSelectedSample(null);
       }
       
+      // Show success message (you can replace this with a toast notification)
       alert('QR code deleted successfully!');
     } catch (error) {
       console.error('Error deleting sample:', error);
       alert('Error deleting QR code. Please try again.');
     } finally {
       setDeletingSample(null);
+      setShowDeleteModal(false);
+      setSampleToDelete(null);
     }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteModal(false);
+    setSampleToDelete(null);
   };
 
   useEffect(() => {
@@ -310,7 +298,7 @@ const ViewQRs: React.FC = () => {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          deleteSample(sample);
+                          showDeleteConfirmation(sample);
                         }}
                         disabled={deletingSample === sample._id}
                         className="text-xs bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700 disabled:opacity-50 transition-colors"
@@ -398,7 +386,7 @@ const ViewQRs: React.FC = () => {
                 </button>
                 <button
                   onClick={() => {
-                    deleteSample(selectedSample);
+                    showDeleteConfirmation(selectedSample);
                     setShowModal(false);
                   }}
                   disabled={deletingSample === selectedSample._id}
@@ -411,6 +399,79 @@ const ViewQRs: React.FC = () => {
                   className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
                 >
                   Close
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {/* Custom Delete Confirmation Modal */}
+        {showDeleteModal && sampleToDelete && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+            onClick={cancelDelete}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center mb-4">
+                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mr-4">
+                  <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Delete QR Code</h3>
+                  <p className="text-sm text-gray-500">This action cannot be undone</p>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <p className="text-gray-700 mb-4">
+                  Are you sure you want to delete this QR code?
+                </p>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm font-medium text-gray-500">Merchant:</span>
+                      <span className="text-sm text-gray-900">{sampleToDelete.merchant}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm font-medium text-gray-500">Design No:</span>
+                      <span className="text-sm text-gray-900">{sampleToDelete.designNo}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm font-medium text-gray-500">Type:</span>
+                      <span className="text-sm text-gray-900">{sampleToDelete.productionSampleType}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm font-medium text-gray-500">Pieces:</span>
+                      <span className="text-sm text-gray-900">{sampleToDelete.pieces}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex space-x-3">
+                <button
+                  onClick={cancelDelete}
+                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  disabled={deletingSample === sampleToDelete._id}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors font-medium"
+                >
+                  {deletingSample === sampleToDelete._id ? 'Deleting...' : 'Delete QR Code'}
                 </button>
               </div>
             </motion.div>

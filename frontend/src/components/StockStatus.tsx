@@ -6,6 +6,7 @@ import { BarChart3, Package, Search, Filter, X, Clock, Layers, RefreshCw } from 
 
 const StockStatus: React.FC = () => {
   const [stockData, setStockData] = useState<StockSummary[]>([]);
+  const [filteredStockData, setFilteredStockData] = useState<StockSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
     merchant: '',
@@ -20,33 +21,51 @@ const StockStatus: React.FC = () => {
   const fetchStockData = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await sampleAPI.getStockSummary(filters);
+      // Only pass merchant filter to API, designNo will be filtered client-side
+      const apiFilters = { merchant: filters.merchant };
+      const response = await sampleAPI.getStockSummary(apiFilters);
       
       // Add null check for response data
       if (response.data && Array.isArray(response.data)) {
         setStockData(response.data);
-        
-        // Calculate summary with null checks
-        const totalPieces = response.data.reduce((sum: number, item: StockSummary) => {
-          return sum + (item?.totalPieces || 0);
-        }, 0);
-        const totalSamples = response.data.length;
-        const lastUpdated = new Date().toLocaleString();
-        
-        setSummary({ totalSamples, totalPieces, lastUpdated });
+        applyFilters(response.data);
       } else {
         console.error('Invalid response data structure:', response.data);
         setStockData([]);
+        setFilteredStockData([]);
         setSummary({ totalSamples: 0, totalPieces: 0, lastUpdated: new Date().toLocaleString() });
       }
     } catch (error) {
       console.error('Error fetching stock data:', error);
       setStockData([]);
+      setFilteredStockData([]);
       setSummary({ totalSamples: 0, totalPieces: 0, lastUpdated: new Date().toLocaleString() });
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [filters.merchant]);
+
+  const applyFilters = useCallback((data: StockSummary[]) => {
+    let filtered = data;
+
+    // Apply design number filter
+    if (filters.designNo) {
+      filtered = filtered.filter(item =>
+        item?._id?.designNo?.toLowerCase().includes(filters.designNo.toLowerCase())
+      );
+    }
+
+    setFilteredStockData(filtered);
+    
+    // Calculate summary with null checks
+    const totalPieces = filtered.reduce((sum: number, item: StockSummary) => {
+      return sum + (item?.totalPieces || 0);
+    }, 0);
+    const totalSamples = filtered.length;
+    const lastUpdated = new Date().toLocaleString();
+    
+    setSummary({ totalSamples, totalPieces, lastUpdated });
+  }, [filters.designNo]);
 
   const handleFilterChange = (field: string, value: string) => {
     setFilters(prev => ({ ...prev, [field]: value }));
@@ -59,6 +78,12 @@ const StockStatus: React.FC = () => {
   useEffect(() => {
     fetchStockData();
   }, [fetchStockData]);
+
+  useEffect(() => {
+    if (stockData.length > 0) {
+      applyFilters(stockData);
+    }
+  }, [applyFilters, stockData]);
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -171,7 +196,7 @@ const StockStatus: React.FC = () => {
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
                 <p className="mt-4 text-gray-600">Loading stock data...</p>
               </div>
-            ) : stockData.length === 0 ? (
+            ) : filteredStockData.length === 0 ? (
               <div className="text-center py-8">
                 <div className="text-gray-400 text-6xl mb-4">📦</div>
                 <p className="text-gray-600">No stock data found</p>
@@ -195,7 +220,7 @@ const StockStatus: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {stockData.map((item, index) => (
+                  {filteredStockData.map((item, index) => (
                     <motion.tr
                       key={`${item?._id?.productionSampleType || 'unknown'}-${item?._id?.designNo || 'unknown'}`}
                       initial={{ opacity: 0, x: -20 }}

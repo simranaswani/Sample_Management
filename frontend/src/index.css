@@ -18,23 +18,153 @@ code {
 /* Utility classes to replace Tailwind */
 .min-h-screen { min-height: 100vh; }
 
-/* Optimized input field styles - 30% smaller */
+/* Mobile-optimized input field styles */
 .input-optimized {
-  width: 30% !important;
+  width: 100% !important;
   min-width: 200px;
-  max-width: 300px;
+  max-width: 100%;
+  font-size: 16px; /* Prevents zoom on iOS */
+  padding: 12px 16px; /* Better touch targets */
+  border-radius: 8px;
+  border: 2px solid #d1d5db;
+  transition: border-color 0.2s ease;
+}
+
+.input-optimized:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .input-optimized-sm {
-  width: 25% !important;
-  min-width: 150px;
-  max-width: 200px;
+  width: 100% !important;
+  min-width: 120px;
+  max-width: 100%;
+  font-size: 14px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+}
+
+.input-optimized-sm:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
 }
 
 .input-optimized-lg {
-  width: 35% !important;
+  width: 100% !important;
   min-width: 250px;
-  max-width: 400px;
+  max-width: 100%;
+  font-size: 18px;
+  padding: 16px 20px;
+  border-radius: 10px;
+  border: 2px solid #d1d5db;
+}
+
+.input-optimized-lg:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Mobile-specific optimizations */
+@media (max-width: 768px) {
+  .input-optimized,
+  .input-optimized-sm,
+  .input-optimized-lg {
+    width: 100% !important;
+    min-width: unset;
+    max-width: 100%;
+    font-size: 16px; /* Prevents zoom on iOS */
+    padding: 14px 16px; /* Larger touch targets */
+  }
+  
+  /* Better mobile spacing */
+  .mobile-padding {
+    padding: 16px !important;
+  }
+  
+  .mobile-margin {
+    margin: 8px !important;
+  }
+  
+  /* Mobile-friendly buttons */
+  .mobile-button {
+    min-height: 48px;
+    padding: 12px 24px;
+    font-size: 16px;
+    border-radius: 8px;
+    touch-action: manipulation;
+  }
+  
+  /* Mobile table optimizations */
+  .mobile-table {
+    font-size: 14px;
+  }
+  
+  .mobile-table th,
+  .mobile-table td {
+    padding: 8px 4px;
+    white-space: nowrap;
+  }
+  
+  /* Stack buttons vertically on mobile */
+  .mobile-stack {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .mobile-stack button {
+    width: 100%;
+  }
+  
+  /* Mobile form improvements */
+  .space-y-8 > * + * {
+    margin-top: 1.5rem;
+  }
+  
+  /* Mobile card improvements */
+  .bg-white {
+    margin: 8px;
+    border-radius: 12px;
+  }
+  
+  /* Mobile text sizing */
+  .text-3xl {
+    font-size: 1.5rem;
+    line-height: 2rem;
+  }
+  
+  .text-2xl {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+  }
+  
+  /* Mobile grid improvements */
+  .grid-cols-1 {
+    gap: 1rem;
+  }
+  
+  /* Mobile table scroll improvements */
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+  
+  /* Mobile input focus improvements */
+  .input-optimized:focus,
+  .input-optimized-sm:focus,
+  .input-optimized-lg:focus {
+    transform: scale(1.02);
+    transition: transform 0.2s ease;
+  }
+  
+  /* Mobile button hover improvements */
+  .mobile-button:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease;
+  }
 }
 
 /* QR Scanner Modal Animation */

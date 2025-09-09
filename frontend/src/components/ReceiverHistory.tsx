@@ -358,9 +358,9 @@ const ReceiverHistory: React.FC = () => {
                               <td className="px-6 py-4 text-sm text-gray-900">
                                 <button
                                   onClick={() => handleViewDetails(receiver.receiverName, combo.merchant, combo.designNo, combo.packingSlipNumbers)}
-                                  className="inline-flex items-center px-3 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors"
+                                  className="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
                                 >
-                                  <Eye className="w-3 h-3 mr-1" />
+                                  <Eye className="w-4 h-4 mr-2" />
                                   View
                                 </button>
                               </td>
@@ -448,7 +448,7 @@ const ReceiverHistory: React.FC = () => {
             <div className="flex justify-end mt-6">
               <button
                 onClick={() => setShowPopup(false)}
-                className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+                className="px-6 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors font-medium"
               >
                 Close
               </button>

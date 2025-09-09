@@ -1,21 +1,76 @@
 import React from 'react';
+import Image from 'next/image';
 
 interface AllenJorgioLogoProps {
   className?: string;
   size?: 'sm' | 'md' | 'lg';
   showSubtitle?: boolean;
+  useImage?: boolean;
+  imageOnly?: boolean;
 }
 
 const AllenJorgioLogo: React.FC<AllenJorgioLogoProps> = ({ 
   className = '', 
   size = 'md', 
-  showSubtitle = true 
+  showSubtitle = true,
+  useImage = false,
+  imageOnly = false
 }) => {
   const sizeClasses = {
     sm: 'h-8 w-auto',
     md: 'h-12 w-auto',
     lg: 'h-16 w-auto'
   };
+
+  const imageSizeClasses = {
+    sm: { width: 32, height: 32 },
+    md: { width: 48, height: 48 },
+    lg: { width: 64, height: 64 }
+  };
+
+  if (useImage) {
+    if (imageOnly) {
+      return (
+        <div className={`flex items-center ${className}`}>
+          <Image
+            src="/logo192.png"
+            alt="Allen Jorgio Logo"
+            width={imageSizeClasses[size].width}
+            height={imageSizeClasses[size].height}
+            className="rounded-lg shadow-sm"
+            priority
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div className={`flex items-center space-x-3 ${className}`}>
+        <Image
+          src="/logo192.png"
+          alt="Allen Jorgio Logo"
+          width={imageSizeClasses[size].width}
+          height={imageSizeClasses[size].height}
+          className="rounded-lg shadow-sm"
+          priority
+        />
+        <div className="flex flex-col">
+          <span className={`font-bold text-gray-900 ${
+            size === 'sm' ? 'text-lg' : size === 'md' ? 'text-xl' : 'text-2xl'
+          }`}>
+            Allen Jorgio
+          </span>
+          {showSubtitle && (
+            <span className={`text-gray-500 ${
+              size === 'sm' ? 'text-xs' : size === 'md' ? 'text-sm' : 'text-base'
+            }`}>
+              Textile Management
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`flex items-center space-x-3 ${className}`}>
