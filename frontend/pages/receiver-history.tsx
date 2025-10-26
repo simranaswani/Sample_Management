@@ -1,6 +1,9 @@
 import React from 'react';
+import type { NextPage } from 'next';
 import ReceiverHistory from '../src/components/ReceiverHistory';
 
-export default function ReceiverHistoryPage() {
+const ReceiverHistoryPage: NextPage = () => {
   return <ReceiverHistory />;
-}
+};
+
+export default ReceiverHistoryPage;

@@ -1,7 +1,9 @@
 import React from 'react';
-import { useRouter } from 'next/router';
+import type { NextPage } from 'next';
 import Home from '../src/components/Home';
 
-export default function IndexPage() {
+const IndexPage: NextPage = () => {
   return <Home />;
-}
+};
+
+export default IndexPage;

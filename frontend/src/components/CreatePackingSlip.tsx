@@ -180,7 +180,7 @@ const CreatePackingSlip: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 py-4 md:py-8">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -191,60 +191,65 @@ const CreatePackingSlip: React.FC = () => {
             Allen Jorgio - Create Packing Slip
           </h1>
 
-          <form onSubmit={handleSubmit} className="space-y-8">
+          <form onSubmit={handleSubmit} className="space-y-6">
             {/* Basic Information */}
-            <div className="bg-gray-50 p-4 md:p-6 rounded-lg">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Basic Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="min-w-0">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Receiver *
+            <div className="bg-gray-50 p-4 md:p-5 rounded-lg overflow-hidden">
+              <h3 className="text-xl font-semibold text-gray-800 mb-4">Basic Information</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-4">
+                {/* Receiver */}
+                <div className="space-y-1.5 min-w-0">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Receiver <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     value={formData.receiverName}
                     onChange={(e) => handleInputChange('receiverName', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                     required
                   />
                 </div>
 
-                <div className="min-w-0">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                {/* Broker */}
+                <div className="space-y-1.5 min-w-0">
+                  <label className="block text-sm font-medium text-gray-700">
                     Broker
                   </label>
                   <input
                     type="text"
                     value={formData.brokerName}
                     onChange={(e) => handleInputChange('brokerName', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                   />
                 </div>
 
-                <div className="min-w-0">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Packing Slip Number *
+                {/* Packing Slip Number */}
+                <div className="space-y-1.5 min-w-0">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Packing Slip Number <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     value={formData.packingSlipNumber}
                     readOnly
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed text-sm"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-600 cursor-not-allowed text-sm"
                   />
-                  <p className="text-xs text-gray-500 mt-1 break-words">
+                  <p className="text-xs text-gray-500 break-words">
                     Auto-generated in format PS-{new Date().getFullYear().toString().slice(-2)}{(new Date().getFullYear() + 1).toString().slice(-2)}XXXX
                   </p>
                 </div>
 
-                <div className="min-w-0">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Date *
+                {/* Date */}
+                <div className="space-y-1.5 min-w-0">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Date <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="date"
                     value={formData.date}
                     onChange={(e) => handleInputChange('date', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                     required
                   />
                 </div>
@@ -292,7 +297,6 @@ const CreatePackingSlip: React.FC = () => {
                         <th className="px-2 md:px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
                         <th className="px-2 md:px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Design No.</th>
                         <th className="px-2 md:px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Pieces</th>
-                        <th className="px-2 md:px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">QR ID</th>
                         <th className="px-2 md:px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
                       </tr>
                     </thead>
@@ -336,9 +340,6 @@ const CreatePackingSlip: React.FC = () => {
                               className="input-optimized-sm mobile-button"
                               min="1"
                             />
-                          </td>
-                          <td className="px-2 md:px-4 py-2 text-sm text-gray-500">
-                            {item.qrCodeId ? item.qrCodeId.substring(0, 8) + '...' : 'Manual'}
                           </td>
                           <td className="px-2 md:px-4 py-2">
                             <button

@@ -134,8 +134,8 @@ const printSticker = (sample: Sample) => {
       color: #000;
     }
     .qr-code {
-      width: 70px;
-      height: 70px;
+      width: 90px;
+      height: 90px;
     }
   </style>
 </head>

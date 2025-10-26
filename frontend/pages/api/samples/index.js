@@ -31,24 +31,46 @@ export default async function handler(req, res) {
         for (let i = 0; i < samples.length; i++) {
           const sampleData = samples[i];
           try {
-            // Check if sample already exists
+            // Check if sample already exists with same merchant, type, and design number
             const existingSample = await Sample.findOne({
               merchant: sampleData.merchant,
+              productionSampleType: sampleData.productionSampleType,
               designNo: sampleData.designNo
             });
 
             if (existingSample) {
-              results.skipped++;
+              // Update the existing sample by adding the pieces
+              existingSample.pieces += sampleData.pieces;
+              existingSample.updatedAt = new Date();
+              
+              // Add to batch history to track individual batches
+              if (!existingSample.batchHistory) {
+                existingSample.batchHistory = [];
+              }
+              existingSample.batchHistory.push({
+                pieces: sampleData.pieces,
+                dateCreated: sampleData.dateCreated || new Date(),
+                createdAt: new Date()
+              });
+              
+              const savedSample = await existingSample.save();
+              createdSamples.push(savedSample);
+              results.created++;
               continue;
             }
 
             // Generate QR code ID
             const qrCodeId = uuidv4();
 
-            // Create new sample
+            // Create new sample with initial batch history entry
             const newSample = new Sample({
               ...sampleData,
-              qrCodeId: qrCodeId
+              qrCodeId: qrCodeId,
+              batchHistory: [{
+                pieces: sampleData.pieces,
+                dateCreated: sampleData.dateCreated || new Date(),
+                createdAt: new Date()
+              }]
             });
 
             const savedSample = await newSample.save();
@@ -76,25 +98,51 @@ export default async function handler(req, res) {
           return res.status(400).json({ error: 'Missing required fields' });
         }
 
-        // Check if sample already exists
+        // Check if sample already exists with same merchant, type, and design number
         const existingSample = await Sample.findOne({
           merchant,
+          productionSampleType,
           designNo
         });
 
         if (existingSample) {
-          return res.status(400).json({ error: 'Sample already exists' });
+          // Update the existing sample by adding the pieces
+          existingSample.pieces += pieces;
+          existingSample.updatedAt = new Date();
+          
+          // Add to batch history to track individual batches
+          if (!existingSample.batchHistory) {
+            existingSample.batchHistory = [];
+          }
+          existingSample.batchHistory.push({
+            pieces: pieces,
+            dateCreated: req.body.dateCreated || new Date(),
+            createdAt: new Date()
+          });
+          
+          await existingSample.save();
+          
+          return res.status(200).json({
+            message: 'Sample updated successfully',
+            sample: existingSample
+          });
         }
 
         // Generate QR code ID
         const qrCodeId = uuidv4();
 
+        // Create new sample with initial batch history entry
         const newSample = new Sample({
           merchant,
           productionSampleType,
           designNo,
           pieces,
-          qrCodeId
+          qrCodeId,
+          batchHistory: [{
+            pieces: pieces,
+            dateCreated: req.body.dateCreated || new Date(),
+            createdAt: new Date()
+          }]
         });
 
         await newSample.save();

@@ -25,7 +25,73 @@ const DailyProduction: React.FC = () => {
     setLoading(true);
     try {
       const response = await sampleAPI.getAllSamples();
-      setSamples(response.data);
+      const allSamples = response.data;
+      
+      // Expand samples with batch history and group by date + merchant/type/design
+      const expandedSamples: any[] = [];
+      const dateGroupMap = new Map<string, any>();
+      
+      allSamples.forEach((sample: any) => {
+        if (sample.batchHistory && sample.batchHistory.length > 0) {
+          // Group batches by date
+          sample.batchHistory.forEach((batch: any) => {
+            const batchDate = batch.dateCreated 
+              ? new Date(batch.dateCreated).toISOString().split('T')[0]
+              : sample.dateCreated 
+                ? new Date(sample.dateCreated).toISOString().split('T')[0]
+                : new Date().toISOString().split('T')[0];
+            
+            // Create unique key for date + merchant + type + design
+            const groupKey = `${batchDate}_${sample.merchant}_${sample.productionSampleType}_${sample.designNo}`;
+            
+            if (dateGroupMap.has(groupKey)) {
+              // Add pieces to existing entry for this date/combination
+              const existing = dateGroupMap.get(groupKey);
+              existing.pieces += batch.pieces;
+            } else {
+              // Create new entry for this date/combination
+              dateGroupMap.set(groupKey, {
+                merchant: sample.merchant,
+                productionSampleType: sample.productionSampleType,
+                designNo: sample.designNo,
+                pieces: batch.pieces,
+                dateCreated: batchDate,
+                _id: groupKey
+              });
+            }
+          });
+        } else {
+          // If no batch history, add the sample as is (for backward compatibility)
+          const date = sample.dateCreated 
+            ? new Date(sample.dateCreated).toISOString().split('T')[0]
+            : new Date().toISOString().split('T')[0];
+          
+          const groupKey = `${date}_${sample.merchant}_${sample.productionSampleType}_${sample.designNo}`;
+          
+          if (dateGroupMap.has(groupKey)) {
+            const existing = dateGroupMap.get(groupKey);
+            existing.pieces += sample.pieces || 0;
+          } else {
+            expandedSamples.push({
+              merchant: sample.merchant,
+              productionSampleType: sample.productionSampleType,
+              designNo: sample.designNo,
+              pieces: sample.pieces || 0,
+              dateCreated: date,
+              _id: groupKey
+            });
+          }
+        }
+      });
+      
+      // Convert map values to array and sort by date (newest first)
+      const groupedSamples = Array.from(dateGroupMap.values());
+      groupedSamples.sort((a, b) => new Date(b.dateCreated).getTime() - new Date(a.dateCreated).getTime());
+      
+      // Combine grouped samples with any remaining expanded samples
+      const allGrouped = [...groupedSamples, ...expandedSamples];
+      
+      setSamples(allGrouped);
     } catch (error) {
       console.error('Error fetching samples:', error);
       setSamples([]);
@@ -302,33 +368,36 @@ const DailyProduction: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredSamples.map((sample, index) => (
-                    <motion.tr
-                      key={sample._id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.4, delay: index * 0.05 }}
-                      className="hover:bg-gray-50"
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 w-1/5">
-                        {new Date(sample.dateCreated).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 w-1/5">
-                        {sample.merchant}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 w-1/5">
-                        {sample.designNo}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 w-1/5">
-                        {sample.productionSampleType}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 w-1/5">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          {sample.pieces}
-                        </span>
-                      </td>
-                    </motion.tr>
-                  ))}
+                  {filteredSamples.map((sample, index) => {
+                    const uniqueKey = sample._id || `sample-${index}`;
+                    return (
+                      <motion.tr
+                        key={uniqueKey}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.4, delay: index * 0.05 }}
+                        className="hover:bg-gray-50"
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 w-1/5">
+                          {new Date(sample.dateCreated).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 w-1/5">
+                          {sample.merchant}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 w-1/5">
+                          {sample.designNo}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 w-1/5">
+                          {sample.productionSampleType}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 w-1/5">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {sample.pieces}
+                          </span>
+                        </td>
+                      </motion.tr>
+                    );
+                  })}
                 </tbody>
               </table>
             )}

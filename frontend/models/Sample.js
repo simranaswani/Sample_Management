@@ -6,7 +6,12 @@ const SampleSchema = new mongoose.Schema({
   designNo: { type: String, required: true },
   pieces: { type: Number, required: true },
   dateCreated: { type: Date, default: Date.now },
-  qrCodeId: { type: String, unique: true }
+  qrCodeId: { type: String, unique: true },
+  batchHistory: [{
+    pieces: Number,
+    dateCreated: Date,
+    createdAt: { type: Date, default: Date.now }
+  }]
 }, { timestamps: true });
 
 export default mongoose.models.Sample || mongoose.model('Sample', SampleSchema);

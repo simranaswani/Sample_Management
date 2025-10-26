@@ -130,6 +130,11 @@ const CreateSample: React.FC = () => {
         const validSamples = (response.data.data || []).filter((sample: any) => sample != null);
         setSubmittedSamples(validSamples);
         setShowSuccess(true);
+        
+        // Show a message indicating if samples were updated
+        if (validSamples.length > 0) {
+          console.log(`${validSamples.length} sample(s) processed successfully. Some may have been updated if they already existed.`);
+        }
       } else {
         // Handle single sample creation
         const singleSample = response.data.sample;
@@ -163,6 +168,90 @@ const CreateSample: React.FC = () => {
       link.href = canvas.toDataURL("image/png", 1.0); // high-quality export
       link.click();
     }
+  };
+
+  // Print Sticker with QR + text (matching ViewQRs)
+  const printSticker = (sample: Sample, qrId?: string) => {
+    const id = qrId || sample.qrCodeId || sample._id || 'unknown';
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const canvas = document.getElementById(`qr-${id}`) as HTMLCanvasElement;
+    const qrDataURL = canvas ? canvas.toDataURL() : '';
+
+    const qrData = getQRData(sample);
+    const stickerHTML = `
+<!DOCTYPE html>
+<html>
+<head>
+  <title>QR Sticker - ${qrData}</title>
+  <style>
+    @page {
+      size: 2in 1in;
+      margin: 0;
+    }
+    body {
+      margin: 0;
+      padding: 4px;
+      font-family: Arial, sans-serif;
+      width: 2in;
+      height: 1in;
+      box-sizing: border-box;
+    }
+    .sticker {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      width: 100%;
+      height: 100%;
+      border: 1px solid #000;
+      padding: 4px;
+      box-sizing: border-box;
+    }
+    .text {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .merchant {
+      font-size: 13px;
+      font-weight: bold;
+      margin: 0;
+      line-height: 1.2;
+    }
+    .design-no {
+      font-size: 13px;
+      margin: 2px 0 0 0;
+      line-height: 1.2;
+      color: #000;
+    }
+    .qr-code {
+      width: 70px;
+      height: 70px;
+    }
+  </style>
+</head>
+<body>
+  <div class="sticker">
+    <div class="text">
+      <div class="merchant">${sample.merchant}</div>
+      <div class="design-no">${sample.designNo}</div>
+    </div>
+    <img src="${qrDataURL}" alt="QR Code" class="qr-code" />
+  </div>
+</body>
+</html>
+    `;
+
+    printWindow.document.write(stickerHTML);
+    printWindow.document.close();
+
+    printWindow.onload = () => {
+      setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+      }, 500);
+    };
   };
 
   return (
@@ -384,24 +473,34 @@ const CreateSample: React.FC = () => {
                           <MicroQRCode
                             id={`qr-${qrId}`} 
                             value={getQRData(sample)}
-                            size={200}
+                            size={120}
                           />
                         </div>
-                      <div className="text-sm font-medium text-gray-800 mb-2">
-                        {sample.productionSampleType} - {sample.designNo}
+                        <div className="text-sm font-medium text-gray-900 mb-1">
+                          {sample.merchant}
+                        </div>
+                        <div className="text-xs text-gray-500 mb-2">
+                          {sample.designNo}
+                        </div>
+                        <div className="text-xs text-gray-500 mb-3">
+                          {sample.productionSampleType}
+                        </div>
+                        <div className="flex justify-center space-x-1 flex-wrap gap-1">
+                          <button
+                            onClick={() => downloadQR(sample, qrId)}
+                            className="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 transition-colors"
+                          >
+                            Download
+                          </button>
+                          <button
+                            onClick={() => printSticker(sample, qrId)}
+                            className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 transition-colors"
+                          >
+                            Print
+                          </button>
+                        </div>
                       </div>
-                      <div className="text-xs text-gray-500 mb-4">
-                        {sample.pieces} pieces
-                      </div>
-                      <button
-                        onClick={() => downloadQR(sample, qrId)}
-                        className="flex items-center space-x-2 mx-auto px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
-                      >
-                        <Download className="w-4 h-4" />
-                        <span>Download QR</span>
-                      </button>
                     </div>
-                  </div>
                   );
                 })}
               </div>

@@ -34,7 +34,12 @@ export default async function handler(req, res) {
     // Packing slip details
     doc.setFontSize(12);
     doc.text(`Packing Slip No: ${packingSlip.packingSlipNumber}`, 20, 50);
-    doc.text(`Date: ${new Date(packingSlip.date).toLocaleDateString()}`, 20, 60);
+    
+    // Format date as dd/mm/yyyy
+    const dateObj = new Date(packingSlip.date);
+    const formattedDate = `${String(dateObj.getDate()).padStart(2, '0')}/${String(dateObj.getMonth() + 1).padStart(2, '0')}/${dateObj.getFullYear()}`;
+    doc.text(`Date: ${formattedDate}`, 20, 60);
+    
     doc.text(`Receiver: ${packingSlip.receiverName}`, 20, 70);
     if (packingSlip.brokerName) {
       doc.text(`Broker: ${packingSlip.brokerName}`, 20, 80);

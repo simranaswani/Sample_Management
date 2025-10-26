@@ -1,6 +1,9 @@
 import React from 'react';
+import type { NextPage } from 'next';
 import StockStatus from '../src/components/StockStatus';
 
-export default function StockStatusPage() {
+const StockStatusPage: NextPage = () => {
   return <StockStatus />;
-}
+};
+
+export default StockStatusPage;
