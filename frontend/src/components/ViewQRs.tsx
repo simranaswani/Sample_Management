@@ -95,31 +95,35 @@ const printSticker = (sample: Sample) => {
   <title>QR Sticker - ${qrData}</title>
   <style>
     @page {
-      size: 2in 1in;
+      size: 4in 1in;
       margin: 0;
     }
     body {
       margin: 0;
-      padding: 4px;
+      padding: 1mm;
       font-family: Arial, sans-serif;
-      width: 2in;
-      height: 1in;
       box-sizing: border-box;
+      width: 4in;
+      height: 1in;
+      display: flex;
+      align-items: flex-start;
     }
     .sticker {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      width: 100%;
-      height: 100%;
-      border: 1px solid #000;
-      padding: 4px;
+      position: relative;
+      width: calc(2in - 2mm);
+      height: calc(1in - 2mm);
+      border: 0.2mm solid #000;
       box-sizing: border-box;
+      background: #fff;
+      overflow: hidden;
+    }
+    .sticker:first-child {
+      margin-right: 2mm;
     }
     .text {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
+      position: absolute;
+      left: 2mm;
+      top: 2mm;
     }
     .merchant {
       font-size: 13px;
@@ -134,12 +138,22 @@ const printSticker = (sample: Sample) => {
       color: #000;
     }
     .qr-code {
-      width: 90px;
-      height: 90px;
+      width: 84px;
+      height: 84px;
+      position: absolute;
+      right: 2mm;
+      bottom: 2mm;
     }
   </style>
 </head>
 <body>
+  <div class="sticker">
+    <div class="text">
+      <div class="merchant">${sample.merchant}</div>
+      <div class="design-no">${sample.designNo}</div>
+    </div>
+    <img src="${qrDataURL}" alt="QR Code" class="qr-code" />
+  </div>
   <div class="sticker">
     <div class="text">
       <div class="merchant">${sample.merchant}</div>
