@@ -2,11 +2,8 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/packing-slip-history": "pages/packing-slip-history.js",
-  "/api/packing-slips": "pages/api/packing-slips.js",
-  "/create-sample": "pages/create-sample.js",
-  "/api/packing-slips/[id]/pdf": "pages/api/packing-slips/[id]/pdf.js",
+  "/": "pages/index.js",
   "/receiver-history": "pages/receiver-history.js",
-  "/api/samples/aggregate/stock": "pages/api/samples/aggregate/stock.js",
-  "/stock-status": "pages/stock-status.js"
+  "/api/samples": "pages/api/samples.js",
+  "/view-qrs": "pages/view-qrs.js"
 }

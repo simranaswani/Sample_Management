@@ -9,6 +9,11 @@ self.__BUILD_MANIFEST = {
   "lowPriorityFiles": [],
   "rootMainFiles": [],
   "pages": {
+    "/": [
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/index.js"
+    ],
     "/_app": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
@@ -19,25 +24,10 @@ self.__BUILD_MANIFEST = {
       "static/chunks/main.js",
       "static/chunks/pages/_error.js"
     ],
-    "/create-sample": [
+    "/view-qrs": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
-      "static/chunks/pages/create-sample.js"
-    ],
-    "/packing-slip-history": [
-      "static/chunks/webpack.js",
-      "static/chunks/main.js",
-      "static/chunks/pages/packing-slip-history.js"
-    ],
-    "/receiver-history": [
-      "static/chunks/webpack.js",
-      "static/chunks/main.js",
-      "static/chunks/pages/receiver-history.js"
-    ],
-    "/stock-status": [
-      "static/chunks/webpack.js",
-      "static/chunks/main.js",
-      "static/chunks/pages/stock-status.js"
+      "static/chunks/pages/view-qrs.js"
     ]
   },
   "ampFirstPages": []
