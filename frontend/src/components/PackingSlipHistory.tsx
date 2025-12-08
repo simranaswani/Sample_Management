@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { packingSlipAPI } from '../services/api';
-import { PackingSlip } from '../types';
+import { PackingSlip, PackingSlipItem } from '../types';
 
 const PackingSlipHistory: React.FC = () => {
   const [packingSlips, setPackingSlips] = useState<PackingSlip[]>([]);
@@ -31,6 +31,24 @@ const PackingSlipHistory: React.FC = () => {
     courier: '',
     docNo: ''
   });
+  const [editPopup, setEditPopup] = useState<{
+    isOpen: boolean;
+    slip?: PackingSlip | null;
+  }>({ isOpen: false, slip: null });
+  const [editFormData, setEditFormData] = useState({
+    receiverName: '',
+    brokerName: '',
+    packingSlipNumber: '',
+    date: '',
+    courier: '',
+    docNo: ''
+  });
+  const [editItems, setEditItems] = useState<PackingSlipItem[]>([]);
+  const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
+  const [deletePopup, setDeletePopup] = useState<{
+    isOpen: boolean;
+    slipId?: string;
+  }>({ isOpen: false, slipId: undefined });
 
   const fetchPackingSlips = async () => {
     setLoading(true);
@@ -170,6 +188,144 @@ const PackingSlipHistory: React.FC = () => {
     } catch (error: any) {
       console.error('Error updating dispatch information:', error);
       console.error('Error details:', error.response?.data);
+    }
+  };
+
+  const openEditPopup = (slip: PackingSlip) => {
+    setEditPopup({ isOpen: true, slip });
+    setEditFormData({
+      receiverName: slip.receiverName,
+      brokerName: slip.brokerName || '',
+      packingSlipNumber: slip.packingSlipNumber,
+      date: new Date(slip.date).toISOString().split('T')[0],
+      courier: slip.courier || '',
+      docNo: slip.docNo || ''
+    });
+    setEditItems(slip.items.map(item => ({ ...item })));
+  };
+
+  const closeEditPopup = () => {
+    setEditPopup({ isOpen: false, slip: null });
+    setEditFormData({
+      receiverName: '',
+      brokerName: '',
+      packingSlipNumber: '',
+      date: '',
+      courier: '',
+      docNo: ''
+    });
+    setEditItems([]);
+  };
+
+  const handleEditInputChange = (field: string, value: string) => {
+    setEditFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const addEditItem = () => {
+    const newItem: PackingSlipItem = {
+      srNo: editItems.length + 1,
+      merchant: '',
+      productionSampleType: '',
+      designNo: '',
+      totalPieces: 0
+    };
+    const updatedItems = [...editItems, newItem];
+    const sortedItems = updatedItems.sort((a, b) => {
+      const merchantA = a.merchant.toLowerCase();
+      const merchantB = b.merchant.toLowerCase();
+      return merchantA.localeCompare(merchantB);
+    });
+    const renumberedItems = sortedItems.map((item, index) => ({
+      ...item,
+      srNo: index + 1
+    }));
+    setEditItems(renumberedItems);
+  };
+
+  const removeEditItem = (index: number) => {
+    const updatedItems = editItems.filter((_, i) => i !== index);
+    const sortedItems = updatedItems.sort((a, b) => {
+      const merchantA = a.merchant.toLowerCase();
+      const merchantB = b.merchant.toLowerCase();
+      return merchantA.localeCompare(merchantB);
+    });
+    const renumberedItems = sortedItems.map((item, i) => ({
+      ...item,
+      srNo: i + 1
+    }));
+    setEditItems(renumberedItems);
+  };
+
+  const updateEditItem = (index: number, field: keyof PackingSlipItem, value: string | number) => {
+    const updatedItems = [...editItems];
+    updatedItems[index] = { ...updatedItems[index], [field]: value };
+    
+    if (field === 'merchant') {
+      const sortedItems = updatedItems.sort((a, b) => {
+        const merchantA = a.merchant.toLowerCase();
+        const merchantB = b.merchant.toLowerCase();
+        return merchantA.localeCompare(merchantB);
+      });
+      const renumberedItems = sortedItems.map((item, i) => ({
+        ...item,
+        srNo: i + 1
+      }));
+      setEditItems(renumberedItems);
+    } else {
+      setEditItems(updatedItems);
+    }
+  };
+
+  const handleEditSubmit = async () => {
+    if (!editPopup.slip?._id) return;
+    
+    if (editItems.length === 0) {
+      alert('Please add at least one item.');
+      return;
+    }
+
+    setIsSubmittingEdit(true);
+    try {
+      const updatedData: Partial<PackingSlip> = {
+        receiverName: editFormData.receiverName,
+        brokerName: editFormData.brokerName,
+        date: new Date(editFormData.date).toISOString(),
+        items: editItems,
+        courier: editFormData.courier,
+        docNo: editFormData.docNo
+      };
+
+      const response = await packingSlipAPI.updatePackingSlip(editPopup.slip._id, updatedData);
+      console.log('Update response:', response.data);
+
+      // Update local state
+      const updatedSlips = packingSlips.map(slip => 
+        slip._id === editPopup.slip?._id 
+          ? { ...slip, ...updatedData }
+          : slip
+      );
+      setPackingSlips(updatedSlips);
+
+      closeEditPopup();
+      alert('Packing slip updated successfully!');
+    } catch (error: any) {
+      console.error('Error updating packing slip:', error);
+      alert('Error updating packing slip. Please try again.');
+    } finally {
+      setIsSubmittingEdit(false);
+    }
+  };
+  const openDeletePopup = (slipId: string) => {
+    setDeletePopup({ isOpen: true, slipId });
+  };
+  const closeDeletePopup = () => {
+    setDeletePopup({ isOpen: false, slipId: undefined });
+  };
+  const handleDeleteConfirm = async () => {
+    if (deletePopup.slipId) {
+      await packingSlipAPI.deletePackingSlip(deletePopup.slipId);
+      setDeletePopup({ isOpen: false, slipId: undefined });
+      fetchPackingSlips();
     }
   };
 
@@ -373,6 +529,18 @@ const PackingSlipHistory: React.FC = () => {
                           >
                             Dispatch
                           </button>
+                          <button
+                            onClick={() => openEditPopup(slip)}
+                            className="text-yellow-600 hover:text-yellow-800 font-medium"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => openDeletePopup(slip._id!)}
+                            className="text-red-600 hover:text-red-800 font-medium"
+                          >
+                            Delete
+                          </button>
                         </div>
                       </td>
                     </motion.tr>
@@ -470,6 +638,232 @@ const PackingSlipHistory: React.FC = () => {
               >
                 Update Dispatch
               </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+      {/* Edit Modal Popup */}
+      {editPopup.isOpen && editPopup.slip && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-4xl mx-4 my-8"
+          >
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Edit Packing Slip</h2>
+              <button
+                onClick={closeEditPopup}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-600" />
+              </button>
+            </div>
+
+            <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
+              {/* Basic Information */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Basic Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Receiver <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.receiverName}
+                      onChange={(e) => handleEditInputChange('receiverName', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Broker
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.brokerName}
+                      onChange={(e) => handleEditInputChange('brokerName', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Packing Slip Number
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.packingSlipNumber}
+                      readOnly
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-600 cursor-not-allowed"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Date <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={editFormData.date}
+                      onChange={(e) => handleEditInputChange('date', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Courier
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.courier}
+                      onChange={(e) => handleEditInputChange('courier', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter courier name"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Doc.No
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.docNo}
+                      onChange={(e) => handleEditInputChange('docNo', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter document number"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Items Section */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold text-gray-800">Items</h3>
+                  <button
+                    type="button"
+                    onClick={addEditItem}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                  >
+                    Add Item
+                  </button>
+                </div>
+
+                {editItems.length === 0 ? (
+                  <p className="text-gray-500 text-center py-4">No items added. Click "Add Item" to add items.</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-100">
+                        <tr>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Sr. No.</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Merchant</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Design No.</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Pieces</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {editItems.map((item, index) => (
+                          <tr key={index}>
+                            <td className="px-4 py-2 text-sm text-gray-900">{item.srNo}</td>
+                            <td className="px-4 py-2">
+                              <input
+                                type="text"
+                                value={item.merchant}
+                                onChange={(e) => updateEditItem(index, 'merchant', e.target.value)}
+                                className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
+                                placeholder="Merchant name"
+                              />
+                            </td>
+                            <td className="px-4 py-2">
+                              <input
+                                type="text"
+                                value={item.productionSampleType}
+                                onChange={(e) => updateEditItem(index, 'productionSampleType', e.target.value)}
+                                className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
+                                placeholder="Paper Booklet, Hanger, etc."
+                              />
+                            </td>
+                            <td className="px-4 py-2">
+                              <input
+                                type="text"
+                                value={item.designNo}
+                                onChange={(e) => updateEditItem(index, 'designNo', e.target.value)}
+                                className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
+                                placeholder="Design number"
+                              />
+                            </td>
+                            <td className="px-4 py-2">
+                              <input
+                                type="number"
+                                value={item.totalPieces}
+                                onChange={(e) => updateEditItem(index, 'totalPieces', parseInt(e.target.value) || 0)}
+                                className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
+                                min="1"
+                              />
+                            </td>
+                            <td className="px-4 py-2">
+                              <button
+                                type="button"
+                                onClick={() => removeEditItem(index)}
+                                className="text-red-600 hover:text-red-800 text-sm font-medium"
+                              >
+                                Remove
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
+              <button
+                onClick={closeEditPopup}
+                className="px-6 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                disabled={isSubmittingEdit}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleEditSubmit}
+                disabled={isSubmittingEdit || editItems.length === 0}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSubmittingEdit ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+      {/* Delete Confirmation Modal */}
+      {deletePopup.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="bg-white rounded-xl shadow-2xl p-6 w-80 max-w-sm mx-2"
+          >
+            <h2 className="text-xl font-bold mb-4 text-center">Confirm Deletion</h2>
+            <p>Are you sure you want to delete this packing slip?</p>
+            <div className="flex justify-end gap-3 mt-6">
+              <button onClick={closeDeletePopup} className="px-4 py-2 bg-gray-200 rounded">Cancel</button>
+              <button onClick={handleDeleteConfirm} className="px-4 py-2 bg-red-600 text-white rounded">Delete</button>
             </div>
           </motion.div>
         </div>
