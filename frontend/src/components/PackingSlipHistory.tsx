@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { X } from 'lucide-react';
+import { X, Plus, Trash2, Save, Package } from 'lucide-react';
 import { packingSlipAPI } from '../services/api';
 import { PackingSlip, PackingSlipItem } from '../types';
+import CustomModal from './CustomModal';
 
 const PackingSlipHistory: React.FC = () => {
   const [packingSlips, setPackingSlips] = useState<PackingSlip[]>([]);
@@ -149,9 +150,9 @@ const PackingSlipHistory: React.FC = () => {
       courier: !dispatchData.courier.trim() ? 'Courier is required' : '',
       docNo: !dispatchData.docNo.trim() ? 'Doc.No is required' : ''
     };
-    
+
     setValidationErrors(errors);
-    
+
     if (errors.courier || errors.docNo) {
       return;
     }
@@ -171,12 +172,12 @@ const PackingSlipHistory: React.FC = () => {
       console.log('Update response:', response.data);
 
       // Update the local state immediately for better UX
-      const updatedSlips = packingSlips.map(slip => 
-        slip._id === dispatchPopup.slipId 
+      const updatedSlips = packingSlips.map(slip =>
+        slip._id === dispatchPopup.slipId
           ? { ...slip, courier: dispatchData.courier, docNo: dispatchData.docNo }
           : slip
       );
-      
+
       console.log('Updated slips:', updatedSlips);
       setPackingSlips(updatedSlips);
 
@@ -229,27 +230,12 @@ const PackingSlipHistory: React.FC = () => {
       designNo: '',
       totalPieces: 0
     };
-    const updatedItems = [...editItems, newItem];
-    const sortedItems = updatedItems.sort((a, b) => {
-      const merchantA = a.merchant.toLowerCase();
-      const merchantB = b.merchant.toLowerCase();
-      return merchantA.localeCompare(merchantB);
-    });
-    const renumberedItems = sortedItems.map((item, index) => ({
-      ...item,
-      srNo: index + 1
-    }));
-    setEditItems(renumberedItems);
+    setEditItems([...editItems, newItem]);
   };
 
   const removeEditItem = (index: number) => {
     const updatedItems = editItems.filter((_, i) => i !== index);
-    const sortedItems = updatedItems.sort((a, b) => {
-      const merchantA = a.merchant.toLowerCase();
-      const merchantB = b.merchant.toLowerCase();
-      return merchantA.localeCompare(merchantB);
-    });
-    const renumberedItems = sortedItems.map((item, i) => ({
+    const renumberedItems = updatedItems.map((item, i) => ({
       ...item,
       srNo: i + 1
     }));
@@ -259,26 +245,12 @@ const PackingSlipHistory: React.FC = () => {
   const updateEditItem = (index: number, field: keyof PackingSlipItem, value: string | number) => {
     const updatedItems = [...editItems];
     updatedItems[index] = { ...updatedItems[index], [field]: value };
-    
-    if (field === 'merchant') {
-      const sortedItems = updatedItems.sort((a, b) => {
-        const merchantA = a.merchant.toLowerCase();
-        const merchantB = b.merchant.toLowerCase();
-        return merchantA.localeCompare(merchantB);
-      });
-      const renumberedItems = sortedItems.map((item, i) => ({
-        ...item,
-        srNo: i + 1
-      }));
-      setEditItems(renumberedItems);
-    } else {
-      setEditItems(updatedItems);
-    }
+    setEditItems(updatedItems);
   };
 
   const handleEditSubmit = async () => {
     if (!editPopup.slip?._id) return;
-    
+
     if (editItems.length === 0) {
       alert('Please add at least one item.');
       return;
@@ -299,8 +271,8 @@ const PackingSlipHistory: React.FC = () => {
       console.log('Update response:', response.data);
 
       // Update local state
-      const updatedSlips = packingSlips.map(slip => 
-        slip._id === editPopup.slip?._id 
+      const updatedSlips = packingSlips.map(slip =>
+        slip._id === editPopup.slip?._id
           ? { ...slip, ...updatedData }
           : slip
       );
@@ -350,6 +322,18 @@ const PackingSlipHistory: React.FC = () => {
     console.log('FilteredSlips updated:', filteredSlips);
   }, [filteredSlips]);
 
+  // Prevent body scroll when edit popup is open
+  useEffect(() => {
+    if (editPopup.isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [editPopup.isOpen]);
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -381,7 +365,7 @@ const PackingSlipHistory: React.FC = () => {
                     className="input-optimized px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Broker
@@ -588,11 +572,10 @@ const PackingSlipHistory: React.FC = () => {
                     }
                   }}
                   placeholder="Enter courier name"
-                  className={`w-48 px-3 py-1 border rounded focus:outline-none focus:ring-1 ${
-                    validationErrors.courier 
-                      ? 'border-red-300 focus:ring-red-500' 
-                      : 'border-gray-300 focus:ring-blue-500'
-                  }`}
+                  className={`w-48 px-3 py-1 border rounded focus:outline-none focus:ring-1 ${validationErrors.courier
+                    ? 'border-red-300 focus:ring-red-500'
+                    : 'border-gray-300 focus:ring-blue-500'
+                    }`}
                 />
               </div>
               {validationErrors.courier && (
@@ -613,11 +596,10 @@ const PackingSlipHistory: React.FC = () => {
                     }
                   }}
                   placeholder="Enter document number"
-                  className={`w-48 px-3 py-1 border rounded focus:outline-none focus:ring-1 ${
-                    validationErrors.docNo 
-                      ? 'border-red-300 focus:ring-red-500' 
-                      : 'border-gray-300 focus:ring-blue-500'
-                  }`}
+                  className={`w-48 px-3 py-1 border rounded focus:outline-none focus:ring-1 ${validationErrors.docNo
+                    ? 'border-red-300 focus:ring-red-500'
+                    : 'border-gray-300 focus:ring-blue-500'
+                    }`}
                 />
               </div>
               {validationErrors.docNo && (
@@ -644,15 +626,16 @@ const PackingSlipHistory: React.FC = () => {
       )}
       {/* Edit Modal Popup */}
       {editPopup.isOpen && editPopup.slip && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
+            initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-4xl mx-4 my-8"
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="bg-white rounded-xl shadow-2xl w-full max-w-3xl mx-4 max-h-[80vh] flex flex-col overflow-hidden"
           >
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Edit Packing Slip</h2>
+            {/* Header */}
+            <div className="flex justify-between items-center px-6 py-4 border-b">
+              <h2 className="text-xl font-bold text-gray-900">Edit Packing Slip</h2>
               <button
                 onClick={closeEditPopup}
                 className="p-2 hover:bg-gray-100 rounded-full transition-colors"
@@ -661,10 +644,13 @@ const PackingSlipHistory: React.FC = () => {
               </button>
             </div>
 
-            <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
+            {/* BODY: this area can scroll if Basic+Items together are tall */}
+            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
               {/* Basic Information */}
               <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Basic Information</h3>
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                  Basic Information
+                </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -673,7 +659,9 @@ const PackingSlipHistory: React.FC = () => {
                     <input
                       type="text"
                       value={editFormData.receiverName}
-                      onChange={(e) => handleEditInputChange('receiverName', e.target.value)}
+                      onChange={(e) =>
+                        handleEditInputChange('receiverName', e.target.value)
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       required
                     />
@@ -686,7 +674,9 @@ const PackingSlipHistory: React.FC = () => {
                     <input
                       type="text"
                       value={editFormData.brokerName}
-                      onChange={(e) => handleEditInputChange('brokerName', e.target.value)}
+                      onChange={(e) =>
+                        handleEditInputChange('brokerName', e.target.value)
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
@@ -710,7 +700,9 @@ const PackingSlipHistory: React.FC = () => {
                     <input
                       type="date"
                       value={editFormData.date}
-                      onChange={(e) => handleEditInputChange('date', e.target.value)}
+                      onChange={(e) =>
+                        handleEditInputChange('date', e.target.value)
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       required
                     />
@@ -723,7 +715,9 @@ const PackingSlipHistory: React.FC = () => {
                     <input
                       type="text"
                       value={editFormData.courier}
-                      onChange={(e) => handleEditInputChange('courier', e.target.value)}
+                      onChange={(e) =>
+                        handleEditInputChange('courier', e.target.value)
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Enter courier name"
                     />
@@ -736,7 +730,9 @@ const PackingSlipHistory: React.FC = () => {
                     <input
                       type="text"
                       value={editFormData.docNo}
-                      onChange={(e) => handleEditInputChange('docNo', e.target.value)}
+                      onChange={(e) =>
+                        handleEditInputChange('docNo', e.target.value)
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Enter document number"
                     />
@@ -744,10 +740,12 @@ const PackingSlipHistory: React.FC = () => {
                 </div>
               </div>
 
-              {/* Items Section */}
+              {/* ITEMS SECTION */}
               <div className="bg-gray-50 p-4 rounded-lg">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-semibold text-gray-800">Items</h3>
+                  <h3 className="text-lg font-semibold text-gray-800">
+                    Items ({editItems.length})
+                  </h3>
                   <button
                     type="button"
                     onClick={addEditItem}
@@ -758,83 +756,126 @@ const PackingSlipHistory: React.FC = () => {
                 </div>
 
                 {editItems.length === 0 ? (
-                  <p className="text-gray-500 text-center py-4">No items added. Click "Add Item" to add items.</p>
+                  <p className="text-gray-500 text-center py-4">
+                    No items added. Click &quot;Add Item&quot; to add items.
+                  </p>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-100">
-                        <tr>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Sr. No.</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Merchant</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Design No.</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Pieces</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {editItems.map((item, index) => (
-                          <tr key={index}>
-                            <td className="px-4 py-2 text-sm text-gray-900">{item.srNo}</td>
-                            <td className="px-4 py-2">
-                              <input
-                                type="text"
-                                value={item.merchant}
-                                onChange={(e) => updateEditItem(index, 'merchant', e.target.value)}
-                                className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
-                                placeholder="Merchant name"
-                              />
-                            </td>
-                            <td className="px-4 py-2">
-                              <input
-                                type="text"
-                                value={item.productionSampleType}
-                                onChange={(e) => updateEditItem(index, 'productionSampleType', e.target.value)}
-                                className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
-                                placeholder="Paper Booklet, Hanger, etc."
-                              />
-                            </td>
-                            <td className="px-4 py-2">
-                              <input
-                                type="text"
-                                value={item.designNo}
-                                onChange={(e) => updateEditItem(index, 'designNo', e.target.value)}
-                                className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
-                                placeholder="Design number"
-                              />
-                            </td>
-                            <td className="px-4 py-2">
-                              <input
-                                type="number"
-                                value={item.totalPieces}
-                                onChange={(e) => updateEditItem(index, 'totalPieces', parseInt(e.target.value) || 0)}
-                                className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
-                                min="1"
-                              />
-                            </td>
-                            <td className="px-4 py-2">
-                              <button
-                                type="button"
-                                onClick={() => removeEditItem(index)}
-                                className="text-red-600 hover:text-red-800 text-sm font-medium"
-                              >
-                                Remove
-                              </button>
-                            </td>
+                    {/* Fixed-height scrollable table */}
+                    <div className="h-60 overflow-y-auto border border-gray-200 rounded-md bg-white">
+                      <table className="min-w-full divide-y divide-gray-200 text-sm">
+                        <thead className="bg-gray-100 sticky top-0 z-10">
+                          <tr>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                              Sr. No.
+                            </th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                              Merchant
+                            </th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                              Type
+                            </th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                              Design No.
+                            </th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                              Pieces
+                            </th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                              Action
+                            </th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {editItems.map((item, index) => (
+                            <tr key={index}>
+                              <td className="px-4 py-2 text-gray-900">
+                                {item.srNo}
+                              </td>
+                              <td className="px-4 py-2">
+                                <input
+                                  type="text"
+                                  value={item.merchant}
+                                  onChange={(e) =>
+                                    updateEditItem(
+                                      index,
+                                      'merchant',
+                                      e.target.value
+                                    )
+                                  }
+                                  className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
+                                  placeholder="Merchant name"
+                                />
+                              </td>
+                              <td className="px-4 py-2">
+                                <input
+                                  type="text"
+                                  value={item.productionSampleType}
+                                  onChange={(e) =>
+                                    updateEditItem(
+                                      index,
+                                      'productionSampleType',
+                                      e.target.value
+                                    )
+                                  }
+                                  className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
+                                  placeholder="Paper Booklet, Hanger, etc."
+                                />
+                              </td>
+                              <td className="px-4 py-2">
+                                <input
+                                  type="text"
+                                  value={item.designNo}
+                                  onChange={(e) =>
+                                    updateEditItem(
+                                      index,
+                                      'designNo',
+                                      e.target.value
+                                    )
+                                  }
+                                  className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
+                                  placeholder="Design number"
+                                />
+                              </td>
+                              <td className="px-4 py-2">
+                                <input
+                                  type="number"
+                                  value={item.totalPieces}
+                                  onChange={(e) =>
+                                    updateEditItem(
+                                      index,
+                                      'totalPieces',
+                                      parseInt(e.target.value) || 0
+                                    )
+                                  }
+                                  className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
+                                  min={1}
+                                />
+                              </td>
+                              <td className="px-4 py-2">
+                                <button
+                                  type="button"
+                                  onClick={() => removeEditItem(index)}
+                                  className="text-red-600 hover:text-red-800 text-sm font-medium"
+                                >
+                                  Remove
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
+            {/* FOOTER */}
+            <div className="flex justify-end space-x-3 px-6 py-4 border-t bg-gray-50">
               <button
                 onClick={closeEditPopup}
-                className="px-6 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                className="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
                 disabled={isSubmittingEdit}
               >
                 Cancel
@@ -842,7 +883,7 @@ const PackingSlipHistory: React.FC = () => {
               <button
                 onClick={handleEditSubmit}
                 disabled={isSubmittingEdit || editItems.length === 0}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmittingEdit ? 'Saving...' : 'Save Changes'}
               </button>
@@ -850,6 +891,7 @@ const PackingSlipHistory: React.FC = () => {
           </motion.div>
         </div>
       )}
+
       {/* Delete Confirmation Modal */}
       {deletePopup.isOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -859,11 +901,23 @@ const PackingSlipHistory: React.FC = () => {
             exit={{ opacity: 0, scale: 0.9 }}
             className="bg-white rounded-xl shadow-2xl p-6 w-80 max-w-sm mx-2"
           >
-            <h2 className="text-xl font-bold mb-4 text-center">Confirm Deletion</h2>
+            <h2 className="text-xl font-bold mb-4 text-center">
+              Confirm Deletion
+            </h2>
             <p>Are you sure you want to delete this packing slip?</p>
             <div className="flex justify-end gap-3 mt-6">
-              <button onClick={closeDeletePopup} className="px-4 py-2 bg-gray-200 rounded">Cancel</button>
-              <button onClick={handleDeleteConfirm} className="px-4 py-2 bg-red-600 text-white rounded">Delete</button>
+              <button
+                onClick={closeDeletePopup}
+                className="px-4 py-2 bg-gray-200 rounded"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
+                className="px-4 py-2 bg-red-600 text-white rounded"
+              >
+                Delete
+              </button>
             </div>
           </motion.div>
         </div>

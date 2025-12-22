@@ -314,13 +314,17 @@ const CreatePackingSlip: React.FC = () => {
                             />
                           </td>
                           <td className="px-2 md:px-4 py-2">
-                            <input
-                              type="text"
+                            <select
                               value={item.productionSampleType}
                               onChange={(e) => updateItem(index, 'productionSampleType', e.target.value)}
-                              placeholder={item.productionSampleType ? "" : "Paper Booklet, Hanger, etc."}
                               className="input-optimized-sm mobile-button"
-                            />
+                            >
+                              <option value="">Select Type</option>
+                              <option value="Paper Booklet">Paper Booklet</option>
+                              <option value="Hanger">Hanger</option>
+                              <option value="Export Booklet">Export Booklet</option>
+                              <option value="Swatch Card">Swatch Card</option>
+                            </select>
                           </td>
                           <td className="px-2 md:px-4 py-2">
                             <input
@@ -329,6 +333,7 @@ const CreatePackingSlip: React.FC = () => {
                               onChange={(e) => updateItem(index, 'designNo', e.target.value)}
                               placeholder={item.designNo ? "" : "Enter design number"}
                               className="input-optimized-sm mobile-button"
+                              maxLength={6}
                             />
                           </td>
                           <td className="px-2 md:px-4 py-2">

@@ -216,27 +216,31 @@ const CreateSample: React.FC = () => {
       position: absolute;
       left: 2mm;
       top: 2mm;
+      max-width: calc(100% - 23mm);
+      overflow: visible;
     }
     .merchant {
       font-size: 13px;
       font-weight: bold;
       margin: 0;
       line-height: 1.2;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
     }
     .design-no {
       font-size: 13px;
       margin: 2px 0 0 0;
       line-height: 1.2;
       color: #000;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
     }
     .qr-code {
-      width: 84px;
-      height: 84px;
+      width: 20mm;
+      height: 20mm;
       position: absolute;
-      right: 0;
-      bottom: 0;
-      margin: 0;
-      padding: 0;
+      right: 1mm;
+      bottom: 1mm;
     }
   </style>
 </head>
@@ -391,6 +395,7 @@ const CreateSample: React.FC = () => {
                       placeholder="e.g., A1, A2, B1"
                       className="input-optimized px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       required
+                      maxLength={6}
                     />
                   </div>
 

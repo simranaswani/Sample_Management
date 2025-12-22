@@ -124,25 +124,31 @@ const printSticker = (sample: Sample) => {
       position: absolute;
       left: 2mm;
       top: 2mm;
+      max-width: calc(100% - 23mm);
+      overflow: visible;
     }
     .merchant {
       font-size: 13px;
       font-weight: bold;
       margin: 0;
       line-height: 1.2;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
     }
     .design-no {
       font-size: 13px;
       margin: 2px 0 0 0;
       line-height: 1.2;
       color: #000;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
     }
     .qr-code {
-      width: 84px;
-      height: 84px;
+      width: 20mm;
+      height: 20mm;
       position: absolute;
-      right: 2mm;
-      bottom: 2mm;
+      right: 1mm;
+      bottom: 1mm;
     }
   </style>
 </head>
