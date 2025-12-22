@@ -626,264 +626,241 @@ const PackingSlipHistory: React.FC = () => {
       )}
       {/* Edit Modal Popup */}
       {editPopup.isOpen && editPopup.slip && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          style={{ padding: '20px' }}
+        >
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="bg-white rounded-xl shadow-2xl w-full max-w-3xl mx-4 max-h-[80vh] flex flex-col overflow-hidden"
+            className="bg-white rounded-lg shadow-xl overflow-hidden"
+            style={{ width: '700px', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}
           >
             {/* Header */}
-            <div className="flex justify-between items-center px-6 py-4 border-b">
-              <h2 className="text-xl font-bold text-gray-900">Edit Packing Slip</h2>
+            <div 
+              className="border-b border-gray-200"
+              style={{ padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+            >
+              <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', margin: 0 }}>
+                Edit Packing Slip
+              </h2>
               <button
                 onClick={closeEditPopup}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                className="hover:bg-gray-100 rounded"
+                style={{ padding: '6px' }}
               >
-                <X className="w-5 h-5 text-gray-600" />
+                <X style={{ width: '20px', height: '20px', color: '#6b7280' }} />
               </button>
             </div>
 
-            {/* BODY: this area can scroll if Basic+Items together are tall */}
-            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+            {/* Body */}
+            <div style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
               {/* Basic Information */}
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">
+              <div style={{ marginBottom: '20px' }}>
+                <h3 style={{ fontSize: '13px', fontWeight: '600', color: '#6b7280', marginBottom: '12px', textTransform: 'uppercase' }}>
                   Basic Information
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Receiver <span className="text-red-500">*</span>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
+                      Receiver <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <input
                       type="text"
                       value={editFormData.receiverName}
-                      onChange={(e) =>
-                        handleEditInputChange('receiverName', e.target.value)
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required
+                      onChange={(e) => handleEditInputChange('receiverName', e.target.value)}
+                      className="focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      style={{ width: '100%', padding: '8px 10px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px' }}
                     />
                   </div>
-
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
                       Broker
                     </label>
                     <input
                       type="text"
                       value={editFormData.brokerName}
-                      onChange={(e) =>
-                        handleEditInputChange('brokerName', e.target.value)
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      onChange={(e) => handleEditInputChange('brokerName', e.target.value)}
+                      className="focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      style={{ width: '100%', padding: '8px 10px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px' }}
                     />
                   </div>
-
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Packing Slip Number
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
+                      Date <span style={{ color: '#ef4444' }}>*</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={editFormData.date}
+                      onChange={(e) => handleEditInputChange('date', e.target.value)}
+                      className="focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      style={{ width: '100%', padding: '8px 10px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
+                      Slip No.
                     </label>
                     <input
                       type="text"
                       value={editFormData.packingSlipNumber}
                       readOnly
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-600 cursor-not-allowed"
+                      style={{ width: '100%', padding: '8px 10px', border: '1px solid #e5e7eb', borderRadius: '6px', fontSize: '13px', backgroundColor: '#f9fafb', color: '#6b7280' }}
                     />
                   </div>
-
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Date <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="date"
-                      value={editFormData.date}
-                      onChange={(e) =>
-                        handleEditInputChange('date', e.target.value)
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
                       Courier
                     </label>
                     <input
                       type="text"
                       value={editFormData.courier}
-                      onChange={(e) =>
-                        handleEditInputChange('courier', e.target.value)
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Enter courier name"
+                      onChange={(e) => handleEditInputChange('courier', e.target.value)}
+                      className="focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      style={{ width: '100%', padding: '8px 10px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px' }}
+                      placeholder="e.g. BlueDart"
                     />
                   </div>
-
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Doc.No
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
+                      Doc No.
                     </label>
                     <input
                       type="text"
                       value={editFormData.docNo}
-                      onChange={(e) =>
-                        handleEditInputChange('docNo', e.target.value)
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Enter document number"
+                      onChange={(e) => handleEditInputChange('docNo', e.target.value)}
+                      className="focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      style={{ width: '100%', padding: '8px 10px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px' }}
+                      placeholder="e.g. AWB123456"
                     />
                   </div>
                 </div>
               </div>
 
-              {/* ITEMS SECTION */}
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-semibold text-gray-800">
+              {/* Items Section */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <h3 style={{ fontSize: '13px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase', margin: 0 }}>
                     Items ({editItems.length})
                   </h3>
                   <button
                     type="button"
                     onClick={addEditItem}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                    className="hover:bg-green-700"
+                    style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 12px', backgroundColor: '#16a34a', color: 'white', borderRadius: '6px', fontSize: '12px', fontWeight: '500', border: 'none', cursor: 'pointer' }}
                   >
+                    <Plus style={{ width: '14px', height: '14px' }} />
                     Add Item
                   </button>
                 </div>
 
-                {editItems.length === 0 ? (
-                  <p className="text-gray-500 text-center py-4">
-                    No items added. Click &quot;Add Item&quot; to add items.
-                  </p>
-                ) : (
-                  <div className="overflow-x-auto">
-                    {/* Fixed-height scrollable table */}
-                    <div className="h-60 overflow-y-auto border border-gray-200 rounded-md bg-white">
-                      <table className="min-w-full divide-y divide-gray-200 text-sm">
-                        <thead className="bg-gray-100 sticky top-0 z-10">
-                          <tr>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                              Sr. No.
-                            </th>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                              Merchant
-                            </th>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                              Type
-                            </th>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                              Design No.
-                            </th>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                              Pieces
-                            </th>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                              Action
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {editItems.map((item, index) => (
-                            <tr key={index}>
-                              <td className="px-4 py-2 text-gray-900">
-                                {item.srNo}
-                              </td>
-                              <td className="px-4 py-2">
-                                <input
-                                  type="text"
-                                  value={item.merchant}
-                                  onChange={(e) =>
-                                    updateEditItem(
-                                      index,
-                                      'merchant',
-                                      e.target.value
-                                    )
-                                  }
-                                  className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
-                                  placeholder="Merchant name"
-                                />
-                              </td>
-                              <td className="px-4 py-2">
-                                <input
-                                  type="text"
-                                  value={item.productionSampleType}
-                                  onChange={(e) =>
-                                    updateEditItem(
-                                      index,
-                                      'productionSampleType',
-                                      e.target.value
-                                    )
-                                  }
-                                  className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
-                                  placeholder="Paper Booklet, Hanger, etc."
-                                />
-                              </td>
-                              <td className="px-4 py-2">
-                                <input
-                                  type="text"
-                                  value={item.designNo}
-                                  onChange={(e) =>
-                                    updateEditItem(
-                                      index,
-                                      'designNo',
-                                      e.target.value
-                                    )
-                                  }
-                                  className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
-                                  placeholder="Design number"
-                                />
-                              </td>
-                              <td className="px-4 py-2">
-                                <input
-                                  type="number"
-                                  value={item.totalPieces}
-                                  onChange={(e) =>
-                                    updateEditItem(
-                                      index,
-                                      'totalPieces',
-                                      parseInt(e.target.value) || 0
-                                    )
-                                  }
-                                  className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
-                                  min={1}
-                                />
-                              </td>
-                              <td className="px-4 py-2">
-                                <button
-                                  type="button"
-                                  onClick={() => removeEditItem(index)}
-                                  className="text-red-600 hover:text-red-800 text-sm font-medium"
-                                >
-                                  Remove
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                {/* Items Table with Scroll */}
+                <div style={{ border: '1px solid #e5e7eb', borderRadius: '6px', overflow: 'hidden' }}>
+                  {editItems.length === 0 ? (
+                    <div style={{ padding: '40px', textAlign: 'center', color: '#9ca3af', fontSize: '13px' }}>
+                      No items added. Click &quot;Add Item&quot; to add.
                     </div>
-                  </div>
-                )}
+                  ) : (
+                    <>
+                      <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                          <thead style={{ backgroundColor: '#f9fafb', position: 'sticky', top: 0 }}>
+                            <tr>
+                              <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb', width: '50px' }}>Sr.</th>
+                              <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Merchant</th>
+                              <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Type</th>
+                              <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Design No.</th>
+                              <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb', width: '70px' }}>Pieces</th>
+                              <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: '600', color: '#374151', borderBottom: '1px solid #e5e7eb', width: '60px' }}>Action</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {editItems.map((item, index) => (
+                              <tr key={index} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                                <td style={{ padding: '8px 12px', color: '#6b7280' }}>{item.srNo}</td>
+                                <td style={{ padding: '6px 8px' }}>
+                                  <input
+                                    type="text"
+                                    value={item.merchant}
+                                    onChange={(e) => updateEditItem(index, 'merchant', e.target.value)}
+                                    className="focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    style={{ width: '100%', padding: '6px 8px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '12px' }}
+                                  />
+                                </td>
+                                <td style={{ padding: '6px 8px' }}>
+                                  <input
+                                    type="text"
+                                    value={item.productionSampleType}
+                                    onChange={(e) => updateEditItem(index, 'productionSampleType', e.target.value)}
+                                    className="focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    style={{ width: '100%', padding: '6px 8px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '12px' }}
+                                  />
+                                </td>
+                                <td style={{ padding: '6px 8px' }}>
+                                  <input
+                                    type="text"
+                                    value={item.designNo}
+                                    onChange={(e) => updateEditItem(index, 'designNo', e.target.value)}
+                                    className="focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    style={{ width: '100%', padding: '6px 8px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '12px' }}
+                                  />
+                                </td>
+                                <td style={{ padding: '6px 8px' }}>
+                                  <input
+                                    type="number"
+                                    value={item.totalPieces}
+                                    onChange={(e) => updateEditItem(index, 'totalPieces', parseInt(e.target.value) || 0)}
+                                    className="focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    style={{ width: '100%', padding: '6px 8px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '12px', textAlign: 'center' }}
+                                    min={1}
+                                  />
+                                </td>
+                                <td style={{ padding: '6px 8px', textAlign: 'center' }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => removeEditItem(index)}
+                                    className="hover:bg-red-50"
+                                    style={{ padding: '4px', color: '#ef4444', border: 'none', background: 'none', cursor: 'pointer', borderRadius: '4px' }}
+                                  >
+                                    <Trash2 style={{ width: '14px', height: '14px' }} />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      <div style={{ backgroundColor: '#f9fafb', padding: '8px 12px', borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                        <span style={{ color: '#6b7280' }}>{editItems.length} item(s)</span>
+                        <span style={{ fontWeight: '600', color: '#374151' }}>
+                          Total: {editItems.reduce((sum, item) => sum + (item.totalPieces || 0), 0)} pcs
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* FOOTER */}
-            <div className="flex justify-end space-x-3 px-6 py-4 border-t bg-gray-50">
+            {/* Footer */}
+            <div 
+              className="border-t border-gray-200 bg-gray-50"
+              style={{ padding: '12px 20px', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}
+            >
               <button
                 onClick={closeEditPopup}
-                className="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
                 disabled={isSubmittingEdit}
+                className="hover:bg-gray-100"
+                style={{ padding: '8px 16px', fontSize: '13px', fontWeight: '500', color: '#374151', backgroundColor: 'white', border: '1px solid #d1d5db', borderRadius: '6px', cursor: 'pointer' }}
               >
                 Cancel
               </button>
               <button
                 onClick={handleEditSubmit}
                 disabled={isSubmittingEdit || editItems.length === 0}
-                className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="hover:bg-blue-700 disabled:opacity-50"
+                style={{ padding: '8px 16px', fontSize: '13px', fontWeight: '500', color: 'white', backgroundColor: '#2563eb', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
               >
                 {isSubmittingEdit ? 'Saving...' : 'Save Changes'}
               </button>
