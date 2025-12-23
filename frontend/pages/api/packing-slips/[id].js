@@ -19,11 +19,20 @@ export default async function handler(req, res) {
     }
   } else if (req.method === 'PUT') {
     try {
-      const { courier, docNo } = req.body;
+      const { receiverName, brokerName, date, items, courier, docNo } = req.body;
+
+      // Build the update object with only the fields that are provided
+      const updateData = {};
+      if (receiverName !== undefined) updateData.receiverName = receiverName;
+      if (brokerName !== undefined) updateData.brokerName = brokerName;
+      if (date !== undefined) updateData.date = date;
+      if (items !== undefined) updateData.items = items;
+      if (courier !== undefined) updateData.courier = courier;
+      if (docNo !== undefined) updateData.docNo = docNo;
 
       const updatedPackingSlip = await PackingSlip.findByIdAndUpdate(
         id,
-        { courier, docNo },
+        updateData,
         { new: true }
       );
 

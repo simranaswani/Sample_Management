@@ -270,10 +270,10 @@ const PackingSlipHistory: React.FC = () => {
       const response = await packingSlipAPI.updatePackingSlip(editPopup.slip._id, updatedData);
       console.log('Update response:', response.data);
 
-      // Update local state
+      // Update local state with the server response to ensure consistency
       const updatedSlips = packingSlips.map(slip =>
         slip._id === editPopup.slip?._id
-          ? { ...slip, ...updatedData }
+          ? response.data.packingSlip
           : slip
       );
       setPackingSlips(updatedSlips);
