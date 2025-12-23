@@ -266,18 +266,20 @@ const CreatePackingSlip: React.FC = () => {
                       Add items manually or scan QR codes. Fill in all required fields.
                     </p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2" style={{ marginLeft: 'auto' }}>
                     <button
                       type="button"
                       onClick={() => setShowQRScanner(true)}
-                      className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm font-medium shadow-sm"
+                      style={{ padding: '6px 14px', fontSize: '13px', borderRadius: '6px', minHeight: 'unset', height: 'auto' }}
+                      className="bg-blue-600 text-white hover:bg-blue-700 transition-colors font-medium"
                     >
                       Scan QR
                     </button>
                     <button
                       type="button"
                       onClick={addItem}
-                      className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium shadow-sm"
+                      style={{ padding: '6px 14px', fontSize: '13px', borderRadius: '6px', minHeight: 'unset', height: 'auto' }}
+                      className="bg-green-600 text-white hover:bg-green-700 transition-colors font-medium"
                     >
                       Add Item
                     </button>
@@ -289,68 +291,68 @@ const CreatePackingSlip: React.FC = () => {
                 <p className="text-gray-500 text-center py-8">No items added yet. Add items manually or scan QR codes.</p>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200 mobile-table">
+                  <table className="min-w-full divide-y divide-gray-200 mobile-table" style={{ tableLayout: 'fixed' }}>
                     <thead className="bg-gray-100">
                       <tr>
-                        <th className="px-2 md:px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Sr. No.</th>
-                        <th className="px-2 md:px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Merchant</th>
-                        <th className="px-2 md:px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                        <th className="px-2 md:px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Design No.</th>
-                        <th className="px-2 md:px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Pieces</th>
-                        <th className="px-2 md:px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+                        <th className="px-2 md:px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase" style={{ width: '60px' }}>Sr. No.</th>
+                        <th className="px-2 md:px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase" style={{ width: '22%' }}>Merchant</th>
+                        <th className="px-2 md:px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase" style={{ width: '22%' }}>Type</th>
+                        <th className="px-2 md:px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase" style={{ width: '18%' }}>Design No.</th>
+                        <th className="px-2 md:px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase" style={{ width: '12%' }}>Pieces</th>
+                        <th className="px-2 md:px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase" style={{ width: '80px' }}>Action</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {items.map((item, index) => (
                         <tr key={index}>
-                          <td className="px-2 md:px-4 py-2 text-sm text-gray-900">{item.srNo}</td>
-                          <td className="px-2 md:px-4 py-2">
+                          <td className="px-2 md:px-3 py-2 text-sm text-gray-900">{item.srNo}</td>
+                          <td className="px-2 md:px-3 py-2">
                             <input
                               type="text"
                               value={item.merchant}
                               onChange={(e) => updateItem(index, 'merchant', e.target.value)}
-                              placeholder={item.merchant ? "" : "Enter merchant name"}
-                              className="input-optimized-sm mobile-button"
+                              placeholder="Merchant"
+                              className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                             />
                           </td>
-                          <td className="px-2 md:px-4 py-2">
+                          <td className="px-2 md:px-3 py-2">
                             <select
                               value={item.productionSampleType}
                               onChange={(e) => updateItem(index, 'productionSampleType', e.target.value)}
-                              className="input-optimized-sm mobile-button"
+                              className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
                             >
                               <option value="">Select Type</option>
-                              <option value="Paper Booklet">Paper Booklet</option>
-                              <option value="Hanger">Hanger</option>
-                              <option value="Export Booklet">Export Booklet</option>
-                              <option value="Swatch Card">Swatch Card</option>
+                              <option value="PAPER BOOKLET">PAPER BOOKLET</option>
+                              <option value="HANGER">HANGER</option>
+                              <option value="EXPORT BOOKLET">EXPORT BOOKLET</option>
+                              <option value="SWATCH CARD">SWATCH CARD</option>
                             </select>
                           </td>
-                          <td className="px-2 md:px-4 py-2">
+                          <td className="px-2 md:px-3 py-2">
                             <input
                               type="text"
                               value={item.designNo}
                               onChange={(e) => updateItem(index, 'designNo', e.target.value)}
-                              placeholder={item.designNo ? "" : "Enter design number"}
-                              className="input-optimized-sm mobile-button"
+                              placeholder="Design No."
+                              className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                               maxLength={6}
                             />
                           </td>
-                          <td className="px-2 md:px-4 py-2">
+                          <td className="px-2 md:px-3 py-2">
                             <input
                               type="number"
                               value={item.totalPieces}
                               onChange={(e) => updateItem(index, 'totalPieces', parseInt(e.target.value) || 0)}
-                              placeholder={item.totalPieces > 0 ? "" : "0"}
-                              className="input-optimized-sm mobile-button"
+                              placeholder="0"
+                              className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                               min="1"
                             />
                           </td>
-                          <td className="px-2 md:px-4 py-2">
+                          <td className="px-2 md:px-3 py-2">
                             <button
                               type="button"
                               onClick={() => removeItem(index)}
-                              className="text-red-600 hover:text-red-800 text-sm mobile-button"
+                              className="text-red-600 hover:text-red-800 text-sm font-medium"
                             >
                               Remove
                             </button>

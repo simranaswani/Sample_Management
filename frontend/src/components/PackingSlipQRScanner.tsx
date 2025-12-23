@@ -285,10 +285,10 @@ const PackingSlipQRScanner: React.FC<PackingSlipQRScannerProps> = ({ items, setI
                   
                   // Map type codes back to full names
                   const typeMap: { [key: string]: string } = {
-                    'HG': 'Hanger',
-                    'PB': 'Paper Booklet',
-                    'EB': 'Export Booklet',
-                    'SC': 'Swatch Card'
+                    'HG': 'HANGER',
+                    'PB': 'PAPER BOOKLET',
+                    'EB': 'EXPORT BOOKLET',
+                    'SC': 'SWATCH CARD'
                   };
                   
                   const productionSampleType = typeMap[typeCode] || typeCode;
