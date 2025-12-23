@@ -81,9 +81,8 @@ export default async function handler(req, res) {
     doc.text(`Total Pieces: ${totalPieces}`, 120, yPosition + 10);
     
     // Footer
-    doc.setFontSize(8);
-    doc.text('Generated on: ' + new Date().toLocaleString(), 20, 280);
     
+       
     // Set response headers for PDF
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="packing-slip-${packingSlip.packingSlipNumber}.pdf"`);
