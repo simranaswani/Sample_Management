@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { BrowserQRCodeReader } from "@zxing/browser";
 import { toast } from "react-toastify";
 import { PackingSlipItem } from "../types";
-import { Camera, X, CheckCircle } from "lucide-react";
+import { Camera, X, CheckCircle, Volume2, VolumeX } from "lucide-react";
 
 interface QrData {
   merchant: string;
@@ -19,472 +19,470 @@ interface PackingSlipQRScannerProps {
 }
 
 const PackingSlipQRScanner: React.FC<PackingSlipQRScannerProps> = ({ items, setItems, onClose }) => {
-  const [scanning, setScanning] = useState(true);
-  const [detectedQrData, setDetectedQrData] = useState<QrData | null>(null);
+  const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
-  const [cameraLoading, setCameraLoading] = useState(true);
-  const [isAdding, setIsAdding] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const [cameraLoading, setCameraLoading] = useState(false);
+  const [scanCount, setScanCount] = useState(0);
+  const [lastScanned, setLastScanned] = useState<string | null>(null);
+  const [showFlash, setShowFlash] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  
   const videoRef = useRef<HTMLVideoElement>(null);
-  const codeReader = useRef<BrowserQRCodeReader | null>(null);
+  const codeReaderRef = useRef<BrowserQRCodeReader | null>(null);
+  const lastScanTimeRef = useRef<number>(0);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const isStartingRef = useRef(false);
 
-  // --- Fix: Ensure increments by 1 only ---
-  const addDetectedToItems = useCallback(
-    (data: QrData) => {
-      setItems((prev) => {
-        const existingIndex = prev.findIndex((item) => item.qrCodeId === data.qrCodeId);
-        if (existingIndex !== -1) {
-          const updated = [...prev];
-          updated[existingIndex] = {
-            ...updated[existingIndex],
-            totalPieces: updated[existingIndex].totalPieces + 1,
-          };
-          // Sort items alphabetically by merchant name
-          const sortedItems = updated.sort((a, b) => {
-            const merchantA = a.merchant.toLowerCase();
-            const merchantB = b.merchant.toLowerCase();
-            return merchantA.localeCompare(merchantB);
-          });
-          // Update serial numbers after sorting
-          const renumberedItems = sortedItems.map((item, i) => ({
-            ...item,
-            srNo: i + 1
-          }));
-          toast.success(`'${data.designNo}' count increased`);
-          return renumberedItems;
-        }
-        const newItem: PackingSlipItem = {
-          srNo: prev.length + 1,
-          merchant: data.merchant,
-          productionSampleType: data.productionSampleType,
-          designNo: data.designNo,
-          qrCodeId: data.qrCodeId,
-          totalPieces: 1,
+  // Play beep sound on successful scan
+  const playBeep = useCallback(() => {
+    if (!soundEnabled) return;
+    
+    try {
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+      
+      const ctx = audioContextRef.current;
+      const oscillator = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      
+      oscillator.frequency.value = 800;
+      oscillator.type = 'sine';
+      gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+      
+      oscillator.start(ctx.currentTime);
+      oscillator.stop(ctx.currentTime + 0.1);
+    } catch (e) {
+      console.log('Audio not available');
+    }
+  }, [soundEnabled]);
+
+  // Generate unique ID for items
+  const generateItemId = () => `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+  // Add scanned item to list
+  const addScannedItem = useCallback((data: QrData) => {
+    // Debounce: prevent duplicate scans within 1.5 seconds
+    const now = Date.now();
+    if (now - lastScanTimeRef.current < 1500) {
+      return;
+    }
+    lastScanTimeRef.current = now;
+
+    // Visual and audio feedback
+    setShowFlash(true);
+    playBeep();
+    setTimeout(() => setShowFlash(false), 200);
+
+    setItems((prev) => {
+      // Check if item already exists
+      const existingIndex = prev.findIndex(
+        (item) => item.qrCodeId === data.qrCodeId || 
+        (item.designNo === data.designNo && item.merchant === data.merchant)
+      );
+
+      if (existingIndex !== -1) {
+        // Increment quantity for existing item
+        const updated = [...prev];
+        updated[existingIndex] = {
+          ...updated[existingIndex],
+          totalPieces: updated[existingIndex].totalPieces + 1,
         };
-        const updatedItems = [...prev, newItem];
-        // Sort items alphabetically by merchant name
-        const sortedItems = updatedItems.sort((a, b) => {
-          const merchantA = a.merchant.toLowerCase();
-          const merchantB = b.merchant.toLowerCase();
-          return merchantA.localeCompare(merchantB);
+        
+        toast.success(`${data.designNo} → Qty: ${updated[existingIndex].totalPieces}`, { 
+          autoClose: 1000,
+          hideProgressBar: true 
         });
-        // Update serial numbers after sorting
-        const renumberedItems = sortedItems.map((item, i) => ({
-          ...item,
-          srNo: i + 1
-        }));
-        toast.success(`'${data.designNo}' added`);
-        return renumberedItems;
+        
+        return updated;
+      }
+
+      // Add new item
+      const newItem: PackingSlipItem = {
+        _tempId: generateItemId(),
+        srNo: prev.length + 1,
+        merchant: data.merchant,
+        productionSampleType: data.productionSampleType,
+        designNo: data.designNo,
+        qrCodeId: data.qrCodeId,
+        totalPieces: 1,
+      } as PackingSlipItem;
+
+      toast.success(`${data.designNo} added`, { 
+        autoClose: 1000,
+        hideProgressBar: true 
       });
-    },
-    [setItems]
-  );
 
-  const handleAddItem = () => {
-    if (detectedQrData && !isAdding) {
-      setIsAdding(true);
-      addDetectedToItems(detectedQrData);
-      setDetectedQrData(null);
-      setScanning(true);
-      setTimeout(() => setIsAdding(false), 400);
-    }
-  };
+      return [...prev, newItem];
+    });
 
-  const handleScanNext = () => {
-    setDetectedQrData(null);
-    setScanning(true);
-  };
+    setScanCount(c => c + 1);
+    setLastScanned(data.designNo);
+  }, [setItems, playBeep]);
 
-  const startCamera = async () => {
+  // Fetch sample data from database
+  const fetchAndAddSample = useCallback(async (qrText: string) => {
     try {
-      setCameraLoading(true);
-      setCameraError(null);
-      
-      // Check if we're on HTTPS or localhost
-      const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost';
-      if (!isSecure) {
-        setCameraError('Camera access requires HTTPS. Please use a secure connection.');
-        setCameraLoading(false);
+      let qrData: QrData | null = null;
+
+      // Try JSON format first
+      try {
+        const parsed = JSON.parse(qrText);
+        if (parsed.qrCodeId && parsed.designNo) {
+          qrData = {
+            merchant: parsed.merchant || '',
+            productionSampleType: parsed.productionSampleType || '',
+            designNo: parsed.designNo,
+            qrCodeId: parsed.qrCodeId
+          };
+        }
+      } catch {
+        // Try pipe-separated format: TypeCode|DesignNo|MerchantCode
+        const parts = qrText.split('|');
+        if (parts.length === 3) {
+          const [typeCode, designNo, merchantCode] = parts;
+          
+          const typeMap: { [key: string]: string } = {
+            'HG': 'HANGER',
+            'PB': 'PAPER BOOKLET',
+            'EB': 'EXPORT BOOKLET',
+            'SC': 'SWATCH CARD'
+          };
+
+          qrData = {
+            merchant: merchantCode,
+            productionSampleType: typeMap[typeCode] || typeCode,
+            designNo: designNo,
+            qrCodeId: `${merchantCode}_${designNo}_${typeCode}`
+          };
+        }
+      }
+
+      if (!qrData) {
+        toast.error("Invalid QR format", { autoClose: 1500 });
         return;
       }
-      
-      // Check if getUserMedia is supported
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        setCameraError('Camera access is not supported on this device.');
-        setCameraLoading(false);
-        return;
-      }
-      
-      // Request camera access with mobile-friendly constraints
-      const constraints = {
-        video: {
-          facingMode: { ideal: 'environment' }, // Prefer back camera
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        },
-        audio: false
-      };
-      
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        
-        // Wait for video to be ready
-        videoRef.current.onloadedmetadata = () => {
-          setScanning(true);
-          setCameraLoading(false);
-        };
-        
-        // Fallback timeout
-        setTimeout(() => {
-          if (cameraLoading) {
-            setCameraLoading(false);
+
+      // Try to enrich data from database
+      try {
+        const response = await fetch(`/api/samples`);
+        if (response.ok) {
+          const samples = await response.json();
+          const sample = samples.find((s: any) => 
+            s.qrCodeId === qrData!.qrCodeId ||
+            (s.designNo === qrData!.designNo && 
+             (s.merchant === qrData!.merchant || 
+              s.merchant.toLowerCase().includes(qrData!.merchant.toLowerCase())))
+          );
+          
+          if (sample) {
+            qrData = {
+              merchant: sample.merchant,
+              productionSampleType: sample.productionSampleType,
+              designNo: sample.designNo,
+              qrCodeId: sample.qrCodeId
+            };
           }
-        }, 5000);
-      }
-    } catch (error: any) {
-      console.error('Camera access error:', error);
-      let errorMessage = 'Failed to access camera. ';
-      
-      if (error.name === 'NotAllowedError') {
-        errorMessage += 'Please allow camera permissions and try again.';
-      } else if (error.name === 'NotFoundError') {
-        errorMessage += 'No camera found on this device.';
-      } else if (error.name === 'NotSupportedError') {
-        errorMessage += 'Camera access is not supported on this device.';
-      } else if (error.name === 'NotReadableError') {
-        errorMessage += 'Camera is already in use by another application.';
-      } else {
-        errorMessage += 'Please check permissions and try again.';
-      }
-      
-      setCameraError(errorMessage);
-      setCameraLoading(false);
-    }
-  };
-
-  const fetchSampleByQrCodeId = useCallback(async (qrCodeId: string, parsedData: any) => {
-    try {
-      const response = await fetch(`/api/samples`);
-      if (response.ok) {
-        const samples = await response.json();
-        const sample = samples.find((s: any) => s.qrCodeId === qrCodeId);
-        if (sample) {
-          // Merge the parsed QR data with the database sample data
-          const completeData = {
-            ...parsedData,
-            merchant: sample.merchant,
-            productionSampleType: sample.productionSampleType
-          };
-          setDetectedQrData(completeData);
-        } else {
-          // If sample not found in database, use the parsed data as is
-          setDetectedQrData(parsedData);
         }
-      } else {
-        // If API call fails, use the parsed data as is
-        setDetectedQrData(parsedData);
+      } catch (fetchError) {
+        console.log('Could not fetch from database, using QR data');
       }
-    } catch (error) {
-      console.error('Error fetching sample data:', error);
-      // If there's an error, use the parsed data as is
-      setDetectedQrData(parsedData);
-    }
-  }, []);
 
-  const fetchSampleByDesignAndMerchant = useCallback(async (designNo: string, merchantCode: string, tempQrData: any) => {
-    try {
-      const response = await fetch(`/api/samples`);
-      if (response.ok) {
-        const samples = await response.json();
-        // Find sample by design number and merchant (try both exact match and partial match)
-        const sample = samples.find((s: any) => 
-          s.designNo === designNo && 
-          (s.merchant === merchantCode || 
-           s.merchant.toLowerCase().includes(merchantCode.toLowerCase()) ||
-           merchantCode.toLowerCase().includes(s.merchant.toLowerCase()))
-        );
-        
-        if (sample) {
-          // Use the actual sample data from database
-          const completeData = {
-            merchant: sample.merchant,
-            productionSampleType: sample.productionSampleType,
-            designNo: sample.designNo,
-            qrCodeId: sample.qrCodeId
-          };
-          setDetectedQrData(completeData);
-        } else {
-          // If sample not found in database, use the parsed data as is
-          setDetectedQrData(tempQrData);
-        }
-      } else {
-        // If API call fails, use the parsed data as is
-        setDetectedQrData(tempQrData);
-      }
+      addScannedItem(qrData);
     } catch (error) {
-      console.error('Error fetching sample data:', error);
-      // If there's an error, use the parsed data as is
-      setDetectedQrData(tempQrData);
+      console.error("QR processing error:", error);
+      toast.error("Error processing QR", { autoClose: 1500 });
     }
-  }, []);
+  }, [addScannedItem]);
 
-  const closeAndStop = useCallback(() => {
+  // Stop camera
+  const stopCamera = useCallback(() => {
     if (videoRef.current?.srcObject) {
       const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach((track) => track.stop());
+      stream.getTracks().forEach(track => track.stop());
       videoRef.current.srcObject = null;
     }
-    codeReader.current = null;
-    onClose();
-  }, [onClose]);
-
-  // Detect mobile device
-  useEffect(() => {
-    const checkMobile = () => {
-      const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
-      const isMobileDevice = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent);
-      setIsMobile(isMobileDevice);
-    };
-    checkMobile();
+    if (codeReaderRef.current) {
+      codeReaderRef.current = null;
+    }
+    setCameraActive(false);
+    isStartingRef.current = false;
   }, []);
 
-  useEffect(() => {
-    if (scanning && videoRef.current) {
-      setCameraLoading(true);
-      setCameraError(null);
-
-      codeReader.current = new BrowserQRCodeReader();
-
-      codeReader.current
-        .decodeFromVideoDevice(undefined, videoRef.current, (result: any, err: any) => {
-          if (result) {
-            setScanning(false);
-            try {
-              const qrText = result.getText();
-              let parsed: any = null;
-              
-              // Try to parse as JSON first (for backward compatibility)
-              try {
-                parsed = JSON.parse(qrText);
-              if (parsed.qrCodeId && parsed.designNo) {
-                // If merchant is missing from QR code, try to fetch it from the database
-                if (!parsed.merchant) {
-                  fetchSampleByQrCodeId(parsed.qrCodeId, parsed);
-                } else {
-                  setDetectedQrData(parsed);
-                }
-                  return;
-                }
-              } catch (jsonError) {
-                // If JSON parsing fails, try the new format: TypeCode|DesignNo|MerchantCode
-                const parts = qrText.split('|');
-                if (parts.length === 3) {
-                  const [typeCode, designNo, merchantCode] = parts;
-                  
-                  // Map type codes back to full names
-                  const typeMap: { [key: string]: string } = {
-                    'HG': 'HANGER',
-                    'PB': 'PAPER BOOKLET',
-                    'EB': 'EXPORT BOOKLET',
-                    'SC': 'SWATCH CARD'
-                  };
-                  
-                  const productionSampleType = typeMap[typeCode] || typeCode;
-                  
-                  // Create a temporary QR data object
-                  const tempQrData = {
-                    merchant: merchantCode, // This will be updated from database
-                    productionSampleType: productionSampleType,
-                    designNo: designNo,
-                    qrCodeId: `${merchantCode}_${designNo}_${typeCode}` // Generate a temporary ID
-                  };
-                  
-                  // Try to fetch the actual sample data from database using designNo and merchant
-                  fetchSampleByDesignAndMerchant(designNo, merchantCode, tempQrData);
-                  return;
-                }
-              }
-              
-              // If we get here, the QR code format is not recognized
-              toast.error("Invalid QR code format", { autoClose: 2000 });
-              setTimeout(() => setScanning(true), 2000);
-            } catch (error) {
-              console.error("QR parsing error:", error);
-              toast.error("Error processing QR code", { autoClose: 2000 });
-              setTimeout(() => setScanning(true), 2000);
-            }
-          }
-          if (err) {
-            console.log("QR scanning error:", err);
-            // Don't set camera error for scanning errors, only for camera access errors
-          }
-        })
-        .then(() => {
-          setCameraLoading(false);
-          console.log("Camera started successfully");
-        })
-        .catch((error) => {
-          console.error("Camera access error:", error);
-          setCameraError("Failed to access camera. Please check permissions.");
-          setCameraLoading(false);
-        });
-
-      return () => {
-        if (videoRef.current?.srcObject) {
-          const stream = videoRef.current.srcObject as MediaStream;
-          stream.getTracks().forEach((track) => track.stop());
-          videoRef.current.srcObject = null;
-        }
-        codeReader.current = null;
-      };
+  // Start camera and scanning
+  const startScanning = useCallback(async () => {
+    // Prevent multiple simultaneous starts
+    if (isStartingRef.current || cameraLoading) {
+      return;
     }
-  }, [scanning, fetchSampleByQrCodeId, fetchSampleByDesignAndMerchant]);
+    
+    // Stop any existing camera first
+    stopCamera();
+    
+    isStartingRef.current = true;
+    setCameraLoading(true);
+    setCameraError(null);
+
+    try {
+      // Check for secure context
+      if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+        throw new Error('Camera requires HTTPS');
+      }
+
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error('Camera not supported');
+      }
+
+      // Small delay to ensure video element is ready
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      if (!videoRef.current) {
+        throw new Error('Video element not ready');
+      }
+
+      codeReaderRef.current = new BrowserQRCodeReader();
+      
+      await codeReaderRef.current.decodeFromVideoDevice(
+        undefined,
+        videoRef.current,
+        (result, error) => {
+          if (result) {
+            const qrText = result.getText();
+            fetchAndAddSample(qrText);
+          }
+        }
+      );
+
+      setCameraActive(true);
+      setCameraLoading(false);
+      isStartingRef.current = false;
+    } catch (error: any) {
+      console.error('Camera error:', error);
+      
+      let message = 'Camera access failed. ';
+      if (error.name === 'NotAllowedError') {
+        message = 'Camera permission denied. Please allow camera access.';
+      } else if (error.name === 'NotFoundError') {
+        message = 'No camera found on this device.';
+      } else if (error.name === 'NotReadableError') {
+        message = 'Camera is in use by another app.';
+      } else if (error.message) {
+        message = error.message;
+      }
+      
+      setCameraError(message);
+      setCameraLoading(false);
+      isStartingRef.current = false;
+    }
+  }, [cameraLoading, stopCamera, fetchAndAddSample]);
+
+  // Close scanner
+  const handleClose = useCallback(() => {
+    stopCamera();
+    onClose();
+  }, [stopCamera, onClose]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      stopCamera();
+    };
+  }, [stopCamera]);
+
+  // Calculate total items in list
+  const totalItems = items.reduce((sum, item) => sum + item.totalPieces, 0);
 
   return (
-     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-       {/* Popup */}
-       <motion.div
-         initial={{ scale: 0.9, opacity: 0 }}
-         animate={{ scale: 1, opacity: 1 }}
-         exit={{ scale: 0.9, opacity: 0 }}
-         onClick={(e) => e.stopPropagation()}
-         className="bg-white rounded-xl p-8 max-w-md w-full mx-4 relative"
-       >
-         {/* Close Button */}
-         <button
-           onClick={closeAndStop}
-           className="absolute top-4 left-4 p-1 rounded-full hover:bg-gray-200 text-gray-500 hover:text-red-600 transition-colors"
-         >
-           <X className="w-5 h-5" />
-         </button>
-
-         {/* Header */}
-         <div className="text-center mb-6">
-           <h3 className="text-xl font-bold text-gray-900">
-             QR Scanner
-           </h3>
-           <p className="text-sm text-gray-600 mt-2">
-             {isMobile 
-               ? "Tap 'Start Camera' and allow camera permissions to begin scanning"
-               : "Click 'Start Camera' to begin scanning QR codes"
-             }
-           </p>
-           {isMobile && (
-             <div className="mt-3 p-3 bg-blue-50 rounded-lg">
-               <p className="text-xs text-blue-800">
-                 <strong>Mobile Tips:</strong> Make sure you're using HTTPS and allow camera permissions when prompted.
-               </p>
-             </div>
-           )}
-         </div>
-
-         {/* Camera */}
-         <div className="text-center mb-6">
-           <div className="relative bg-black h-64 flex items-center justify-center rounded-lg overflow-hidden">
-             <video
-               ref={videoRef}
-               className="w-full h-full object-cover"
-               autoPlay
-               playsInline
-               muted
-             />
-              {/* Overlay scanning frame - only show when camera is active */}
-              {!cameraLoading && !cameraError && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="border-4 border-red-500 rounded-lg w-48 h-48"></div>
-                </div>
-              )}
-             {cameraError && (
-               <div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-75">
-                 <p className="text-red-400 text-center p-4">{cameraError}</p>
-                 <button
-                   onClick={() => {
-                     setCameraError(null);
-                     startCamera();
-                   }}
-                   className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                 >
-                   Retry Camera
-                 </button>
-               </div>
-             )}
-             {cameraLoading && !cameraError && (
-               <div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-75">
-                 <div className="w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
-                 <p className="text-white text-sm mt-2">Starting camera...</p>
-               </div>
-             )}
-             {!cameraLoading && !cameraError && !videoRef.current?.srcObject && (
-               <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-800">
-                 <Camera className="w-12 h-12 text-gray-400 mb-2" />
-                 <p className="text-white text-sm">Camera not started</p>
-                 <p className="text-gray-400 text-xs mt-1">Tap "Start Camera" to begin</p>
-               </div>
-             )}
-           </div>
-         </div>
-
-         {/* Item detected */}
-         {detectedQrData && (
-           <div className="space-y-3 mb-6">
-             <div className="flex items-center gap-2 mb-3">
-               <CheckCircle className="w-5 h-5 text-green-600" />
-               <span className="font-semibold text-green-800">Item Detected</span>
-             </div>
-             <div className="space-y-2">
-               <div className="flex justify-between">
-                 <span className="font-medium text-gray-700">Design No:</span>
-                 <span className="text-gray-900">{detectedQrData.designNo}</span>
-               </div>
-               <div className="flex justify-between">
-                 <span className="font-medium text-gray-700">Merchant:</span>
-                 <span className="text-gray-900">{detectedQrData.merchant}</span>
-               </div>
-               <div className="flex justify-between">
-                 <span className="font-medium text-gray-700">Type:</span>
-                 <span className="text-gray-900">{detectedQrData.productionSampleType}</span>
-               </div>
-             </div>
-           </div>
-         )}
-
-         {/* Footer */}
-         <div className="flex justify-center space-x-3">
-          {detectedQrData ? (
-            <>
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      style={{ padding: '20px' }}
+    >
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.95, opacity: 0 }}
+        className="bg-white rounded-lg shadow-xl overflow-hidden"
+        style={{ width: '380px', maxWidth: '90vw' }}
+      >
+        {/* Header */}
+        <div style={{ backgroundColor: '#2563eb', color: 'white', padding: '12px 16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <h2 style={{ fontSize: '16px', fontWeight: '600', margin: 0 }}>Scan Items</h2>
+              <p style={{ fontSize: '12px', color: '#bfdbfe', margin: '2px 0 0 0' }}>Point at QR code</p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <button
-                onClick={handleScanNext}
-                className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+                onClick={() => setSoundEnabled(!soundEnabled)}
+                style={{ padding: '6px', borderRadius: '6px', background: soundEnabled ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', color: 'white' }}
+                title={soundEnabled ? 'Sound on' : 'Sound off'}
               >
-                Rescan
+                {soundEnabled ? <Volume2 style={{ width: '16px', height: '16px' }} /> : <VolumeX style={{ width: '16px', height: '16px' }} />}
               </button>
               <button
-                onClick={handleAddItem}
-                disabled={isAdding}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                onClick={handleClose}
+                style={{ padding: '6px', borderRadius: '6px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'white' }}
               >
-                {isAdding ? "Adding..." : "Add to List"}
+                <X style={{ width: '18px', height: '18px' }} />
               </button>
-            </>
-          ) : (
-            <>
-              <button
-                onClick={handleScanNext}
-                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition-colors"
-                disabled={scanning}
-              >
-                {scanning ? "Scanning..." : "Scan Item"}
-              </button>
-              <button
-                onClick={scanning ? () => setScanning(false) : startCamera}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-              >
-                {scanning ? "Stop Camera" : "Start Camera"}
-              </button>
-            </>
+            </div>
+          </div>
+        </div>
+
+        {/* Stats Bar */}
+        <div style={{ backgroundColor: '#f3f4f6', padding: '8px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-around', borderBottom: '1px solid #e5e7eb', textAlign: 'center' }}>
+          <div>
+            <div style={{ fontSize: '18px', fontWeight: '700', color: '#2563eb' }}>{scanCount}</div>
+            <div style={{ fontSize: '11px', color: '#6b7280' }}>Scans</div>
+          </div>
+          <div style={{ width: '1px', height: '24px', backgroundColor: '#d1d5db' }}></div>
+          <div>
+            <div style={{ fontSize: '18px', fontWeight: '700', color: '#16a34a' }}>{items.length}</div>
+            <div style={{ fontSize: '11px', color: '#6b7280' }}>Items</div>
+          </div>
+          <div style={{ width: '1px', height: '24px', backgroundColor: '#d1d5db' }}></div>
+          <div>
+            <div style={{ fontSize: '18px', fontWeight: '700', color: '#9333ea' }}>{totalItems}</div>
+            <div style={{ fontSize: '11px', color: '#6b7280' }}>Qty</div>
+          </div>
+        </div>
+
+        {/* Camera View */}
+        <div style={{ position: 'relative', backgroundColor: '#000', height: '200px' }}>
+          <video
+            ref={videoRef}
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            autoPlay
+            playsInline
+            muted
+          />
+          
+          {/* Scan Frame Overlay */}
+          {cameraActive && !cameraError && (
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+              <div style={{ position: 'relative', width: '140px', height: '140px' }}>
+                {/* Corner brackets */}
+                <div style={{ position: 'absolute', top: 0, left: 0, width: '20px', height: '20px', borderTop: '3px solid #4ade80', borderLeft: '3px solid #4ade80', borderTopLeftRadius: '4px' }}></div>
+                <div style={{ position: 'absolute', top: 0, right: 0, width: '20px', height: '20px', borderTop: '3px solid #4ade80', borderRight: '3px solid #4ade80', borderTopRightRadius: '4px' }}></div>
+                <div style={{ position: 'absolute', bottom: 0, left: 0, width: '20px', height: '20px', borderBottom: '3px solid #4ade80', borderLeft: '3px solid #4ade80', borderBottomLeftRadius: '4px' }}></div>
+                <div style={{ position: 'absolute', bottom: 0, right: 0, width: '20px', height: '20px', borderBottom: '3px solid #4ade80', borderRight: '3px solid #4ade80', borderBottomRightRadius: '4px' }}></div>
+                
+                {/* Scanning line */}
+                <motion.div
+                  style={{ position: 'absolute', left: '4px', right: '4px', height: '2px', backgroundColor: '#4ade80' }}
+                  animate={{ top: ['10%', '90%', '10%'] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+                />
+              </div>
+            </div>
           )}
+
+          {/* Flash effect */}
+          <AnimatePresence>
+            {showFlash && (
+              <motion.div
+                initial={{ opacity: 0.7 }}
+                animate={{ opacity: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                style={{ position: 'absolute', inset: 0, backgroundColor: '#4ade80', pointerEvents: 'none' }}
+              />
+            )}
+          </AnimatePresence>
+
+          {/* Loading state */}
+          {cameraLoading && (
+            <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+              <div className="animate-spin" style={{ width: '36px', height: '36px', border: '3px solid #60a5fa', borderTopColor: 'transparent', borderRadius: '50%' }}></div>
+              <p style={{ color: 'white', marginTop: '12px', fontSize: '13px' }}>Starting camera...</p>
+            </div>
+          )}
+
+          {/* Idle state - camera not started */}
+          {!cameraActive && !cameraLoading && !cameraError && (
+            <div style={{ position: 'absolute', inset: 0, backgroundColor: '#1f2937', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+              <Camera style={{ width: '40px', height: '40px', color: '#6b7280', marginBottom: '8px' }} />
+              <p style={{ color: '#9ca3af', fontSize: '13px' }}>Click "Start Camera"</p>
+            </div>
+          )}
+
+          {/* Error state */}
+          {cameraError && (
+            <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.9)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+              <Camera style={{ width: '36px', height: '36px', color: '#f87171', marginBottom: '8px' }} />
+              <p style={{ color: 'white', textAlign: 'center', fontSize: '13px', marginBottom: '12px' }}>{cameraError}</p>
+              <button
+                onClick={startScanning}
+                style={{ padding: '8px 16px', backgroundColor: '#2563eb', color: 'white', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: '500' }}
+              >
+                Try Again
+              </button>
+            </div>
+          )}
+
+          {/* Last scanned indicator */}
+          {lastScanned && cameraActive && (
+            <div style={{ position: 'absolute', bottom: '8px', left: '8px', right: '8px' }}>
+              <div style={{ backgroundColor: 'rgba(34, 197, 94, 0.9)', color: 'white', padding: '8px 12px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
+                <CheckCircle style={{ width: '16px', height: '16px' }} />
+                <span style={{ fontWeight: '500' }}>{lastScanned}</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: '12px', backgroundColor: 'white', borderTop: '1px solid #e5e7eb' }}>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={cameraActive ? stopCamera : startScanning}
+              disabled={cameraLoading}
+              style={{ 
+                flex: 1, 
+                padding: '10px', 
+                borderRadius: '8px', 
+                fontWeight: '500', 
+                fontSize: '13px',
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                gap: '6px',
+                border: 'none',
+                cursor: cameraLoading ? 'not-allowed' : 'pointer',
+                opacity: cameraLoading ? 0.5 : 1,
+                backgroundColor: cameraActive ? '#e5e7eb' : '#2563eb',
+                color: cameraActive ? '#374151' : 'white'
+              }}
+            >
+              <Camera style={{ width: '16px', height: '16px' }} />
+              {cameraLoading ? 'Starting...' : cameraActive ? 'Stop' : 'Start Camera'}
+            </button>
+            <button
+              onClick={handleClose}
+              style={{ 
+                flex: 1, 
+                padding: '10px', 
+                borderRadius: '8px', 
+                fontWeight: '500', 
+                fontSize: '13px',
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                gap: '6px',
+                border: 'none',
+                cursor: 'pointer',
+                backgroundColor: '#16a34a',
+                color: 'white'
+              }}
+            >
+              <CheckCircle style={{ width: '16px', height: '16px' }} />
+              Done ({items.length})
+            </button>
+          </div>
         </div>
       </motion.div>
     </div>

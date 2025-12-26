@@ -40,39 +40,25 @@ const CreatePackingSlip: React.FC = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  // Generate unique ID for each item
+  const generateItemId = () => `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
   const addItem = () => {
-    const newItem: PackingSlipItem = {
+    const newItem: PackingSlipItem & { _tempId: string } = {
+      _tempId: generateItemId(),
       srNo: items.length + 1,
       merchant: '',
       productionSampleType: '',
       designNo: '',
       totalPieces: 0
     };
-    const updatedItems = [...items, newItem];
-    // Sort items alphabetically by merchant name
-    const sortedItems = updatedItems.sort((a, b) => {
-      const merchantA = a.merchant.toLowerCase();
-      const merchantB = b.merchant.toLowerCase();
-      return merchantA.localeCompare(merchantB);
-    });
-    // Update serial numbers after sorting
-    const renumberedItems = sortedItems.map((item, index) => ({
-      ...item,
-      srNo: index + 1
-    }));
-    setItems(renumberedItems);
+    setItems([...items, newItem]);
   };
 
   const removeItem = (index: number) => {
     const updatedItems = items.filter((_, i) => i !== index);
-    // Sort items alphabetically by merchant name
-    const sortedItems = updatedItems.sort((a, b) => {
-      const merchantA = a.merchant.toLowerCase();
-      const merchantB = b.merchant.toLowerCase();
-      return merchantA.localeCompare(merchantB);
-    });
-    // Update serial numbers after sorting
-    const renumberedItems = sortedItems.map((item, i) => ({
+    // Update serial numbers after removal
+    const renumberedItems = updatedItems.map((item, i) => ({
       ...item,
       srNo: i + 1
     }));
@@ -82,39 +68,47 @@ const CreatePackingSlip: React.FC = () => {
   const updateItem = (index: number, field: keyof PackingSlipItem, value: string | number) => {
     const updatedItems = [...items];
     updatedItems[index] = { ...updatedItems[index], [field]: value };
-    
-    // If merchant field is updated, sort items alphabetically
-    if (field === 'merchant') {
-      const sortedItems = updatedItems.sort((a, b) => {
-        const merchantA = a.merchant.toLowerCase();
-        const merchantB = b.merchant.toLowerCase();
-        return merchantA.localeCompare(merchantB);
-      });
-      // Update serial numbers after sorting
-      const renumberedItems = sortedItems.map((item, i) => ({
-        ...item,
-        srNo: i + 1
-      }));
-      setItems(renumberedItems);
-    } else {
-      setItems(updatedItems);
-    }
+    setItems(updatedItems);
   };
 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate that all items have Type selected
+    const itemsWithoutType = items.filter(item => !item.productionSampleType);
+    if (itemsWithoutType.length > 0) {
+      alert('Please select a Type for all items.');
+      return;
+    }
+    
     setIsSubmitting(true);
 
     try {
+      // Sort items alphabetically by merchant name before submission
+      const sortedItems = [...items].sort((a, b) => {
+        const merchantA = a.merchant.toLowerCase();
+        const merchantB = b.merchant.toLowerCase();
+        return merchantA.localeCompare(merchantB);
+      });
+      
+      // Renumber and clean items (remove _tempId)
+      const cleanedItems = sortedItems.map((item, index) => ({
+        srNo: index + 1,
+        merchant: item.merchant,
+        productionSampleType: item.productionSampleType,
+        designNo: item.designNo,
+        totalPieces: item.totalPieces
+      }));
+
       const packingSlipData: Omit<PackingSlip, '_id'> = {
         ...formData,
-        items,
+        items: cleanedItems,
         date: new Date().toISOString()
       };
 
       console.log('Submitting packing slip data:', JSON.stringify(packingSlipData, null, 2));
-      console.log('Items being submitted:', items);
+      console.log('Items being submitted:', cleanedItems);
 
       const response = await packingSlipAPI.createPackingSlip(packingSlipData);
       console.log('Created slip response:', response.data);
@@ -296,7 +290,7 @@ const CreatePackingSlip: React.FC = () => {
                       <tr>
                         <th className="px-2 md:px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase" style={{ width: '60px' }}>Sr. No.</th>
                         <th className="px-2 md:px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase" style={{ width: '22%' }}>Merchant</th>
-                        <th className="px-2 md:px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase" style={{ width: '22%' }}>Type</th>
+                        <th className="px-2 md:px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase" style={{ width: '22%' }}>Type <span className="text-red-500">*</span></th>
                         <th className="px-2 md:px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase" style={{ width: '18%' }}>Design No.</th>
                         <th className="px-2 md:px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase" style={{ width: '12%' }}>Pieces</th>
                         <th className="px-2 md:px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase" style={{ width: '80px' }}>Action</th>
@@ -304,7 +298,7 @@ const CreatePackingSlip: React.FC = () => {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {items.map((item, index) => (
-                        <tr key={index}>
+                        <tr key={(item as any)._tempId || index}>
                           <td className="px-2 md:px-3 py-2 text-sm text-gray-900">{item.srNo}</td>
                           <td className="px-2 md:px-3 py-2">
                             <input
