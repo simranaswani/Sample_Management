@@ -124,10 +124,16 @@ const PackingSlipQRScanner: React.FC<PackingSlipQRScannerProps> = ({ items, setI
     setLastScanned(data.designNo);
   }, [setItems, playBeep]);
 
+  // Helper: Generate abbreviated merchant code (same logic as QR generation)
+  const abbreviateMerchant = (merchant: string): string => {
+    return merchant.replace(/\s+/g, '').slice(0, 6).toUpperCase();
+  };
+
   // Fetch sample data from database
   const fetchAndAddSample = useCallback(async (qrText: string) => {
     try {
       let qrData: QrData | null = null;
+      let merchantCodeFromQR = '';
 
       // Try JSON format first
       try {
@@ -145,6 +151,7 @@ const PackingSlipQRScanner: React.FC<PackingSlipQRScannerProps> = ({ items, setI
         const parts = qrText.split('|');
         if (parts.length === 3) {
           const [typeCode, designNo, merchantCode] = parts;
+          merchantCodeFromQR = merchantCode.toUpperCase();
           
           const typeMap: { [key: string]: string } = {
             'HG': 'HANGER',
@@ -172,24 +179,44 @@ const PackingSlipQRScanner: React.FC<PackingSlipQRScannerProps> = ({ items, setI
         const response = await fetch(`/api/samples`);
         if (response.ok) {
           const samples = await response.json();
-          const sample = samples.find((s: any) => 
-            s.qrCodeId === qrData!.qrCodeId ||
-            (s.designNo === qrData!.designNo && 
-             (s.merchant === qrData!.merchant || 
-              s.merchant.toLowerCase().includes(qrData!.merchant.toLowerCase())))
-          );
+          console.log('Fetched samples count:', samples.length);
+          console.log('Looking for designNo:', qrData!.designNo, 'merchantCode:', merchantCodeFromQR);
+          
+          // Find matching sample - try multiple strategies
+          const sample = samples.find((s: any) => {
+            const designMatch = s.designNo && s.designNo.toUpperCase() === qrData!.designNo.toUpperCase();
+            
+            if (designMatch) {
+              // Check merchant abbreviation match
+              const dbMerchantAbbrev = abbreviateMerchant(s.merchant || '');
+              console.log('Checking sample:', s.merchant, '-> abbrev:', dbMerchantAbbrev, 'vs QR:', merchantCodeFromQR);
+              
+              if (merchantCodeFromQR && dbMerchantAbbrev === merchantCodeFromQR) {
+                console.log('MATCH FOUND by abbreviation!');
+                return true;
+              }
+            }
+            
+            return false;
+          });
           
           if (sample) {
+            // Use full data from database
+            console.log('Using database sample:', sample.merchant, sample.productionSampleType);
             qrData = {
               merchant: sample.merchant,
-              productionSampleType: sample.productionSampleType,
+              productionSampleType: (sample.productionSampleType || '').toUpperCase(),
               designNo: sample.designNo,
-              qrCodeId: sample.qrCodeId
+              qrCodeId: sample.qrCodeId || qrData!.qrCodeId
             };
+          } else {
+            console.log('No matching sample found in database');
           }
+        } else {
+          console.log('API response not ok:', response.status);
         }
       } catch (fetchError) {
-        console.log('Could not fetch from database, using QR data');
+        console.log('Error fetching from database:', fetchError);
       }
 
       addScannedItem(qrData);

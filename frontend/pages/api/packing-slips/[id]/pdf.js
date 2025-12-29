@@ -56,11 +56,17 @@ export default async function handler(req, res) {
     // Draw line under header
     doc.line(20, 105, 190, 105);
     
-    // Items
+    // Items - sort alphabetically by merchant
     let yPosition = 115;
     let totalPieces = 0;
     
-    packingSlip.items.forEach((item, index) => {
+    const sortedItems = [...packingSlip.items].sort((a, b) => {
+      const merchantA = (a.merchant || '').toLowerCase();
+      const merchantB = (b.merchant || '').toLowerCase();
+      return merchantA.localeCompare(merchantB);
+    });
+    
+    sortedItems.forEach((item, index) => {
       if (yPosition > 270) {
         doc.addPage();
         yPosition = 20;
