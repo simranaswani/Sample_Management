@@ -42,7 +42,7 @@ export default async function handler(req, res) {
     
     doc.text(`Receiver: ${packingSlip.receiverName}`, 20, 70);
     if (packingSlip.brokerName) {
-      doc.text(`Broker: ${packingSlip.brokerName}`, 20, 80);
+      doc.text(`Ref: ${packingSlip.brokerName}`, 20, 80);
     }
     
     // Items table header
