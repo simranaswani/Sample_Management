@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { BrowserQRCodeReader } from "@zxing/browser";
 import { toast } from "react-toastify";
 import { PackingSlipItem } from "../types";
-import { Camera, X, CheckCircle, Volume2, VolumeX } from "lucide-react";
+import { Camera, X, CheckCircle, Volume2, VolumeX, Plus } from "lucide-react";
 
 interface QrData {
   merchant: string;
@@ -23,15 +23,15 @@ const PackingSlipQRScanner: React.FC<PackingSlipQRScannerProps> = ({ items, setI
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [cameraLoading, setCameraLoading] = useState(false);
   const [scanCount, setScanCount] = useState(0);
-  const [lastScanned, setLastScanned] = useState<string | null>(null);
-  const [showFlash, setShowFlash] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [detectedItem, setDetectedItem] = useState<QrData | null>(null);
+  const [isScanning, setIsScanning] = useState(true);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const codeReaderRef = useRef<BrowserQRCodeReader | null>(null);
-  const lastScanTimeRef = useRef<number>(0);
   const audioContextRef = useRef<AudioContext | null>(null);
   const isStartingRef = useRef(false);
+  const lastScannedQRRef = useRef<string>('');
 
   // Play beep sound on successful scan
   const playBeep = useCallback(() => {
@@ -64,19 +64,16 @@ const PackingSlipQRScanner: React.FC<PackingSlipQRScannerProps> = ({ items, setI
   // Generate unique ID for items
   const generateItemId = () => `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-  // Add scanned item to list
-  const addScannedItem = useCallback((data: QrData) => {
-    // Debounce: prevent duplicate scans within 1.5 seconds
-    const now = Date.now();
-    if (now - lastScanTimeRef.current < 1500) {
-      return;
-    }
-    lastScanTimeRef.current = now;
+  // Helper: Generate abbreviated merchant code (same logic as QR generation)
+  const abbreviateMerchant = (merchant: string): string => {
+    return merchant.replace(/\s+/g, '').slice(0, 6).toUpperCase();
+  };
 
-    // Visual and audio feedback
-    setShowFlash(true);
-    playBeep();
-    setTimeout(() => setShowFlash(false), 200);
+  // Add confirmed item to list
+  const addConfirmedItem = useCallback(() => {
+    if (!detectedItem) return;
+
+    const data = detectedItem;
 
     setItems((prev) => {
       // Check if item already exists
@@ -121,16 +118,34 @@ const PackingSlipQRScanner: React.FC<PackingSlipQRScannerProps> = ({ items, setI
     });
 
     setScanCount(c => c + 1);
-    setLastScanned(data.designNo);
-  }, [setItems, playBeep]);
+    
+    // Clear detected item and resume scanning
+    setDetectedItem(null);
+    setIsScanning(true);
+    lastScannedQRRef.current = ''; // Allow re-scanning same item if needed
+  }, [detectedItem, setItems]);
 
-  // Helper: Generate abbreviated merchant code (same logic as QR generation)
-  const abbreviateMerchant = (merchant: string): string => {
-    return merchant.replace(/\s+/g, '').slice(0, 6).toUpperCase();
-  };
+  // Cancel and scan next
+  const cancelAndScanNext = useCallback(() => {
+    setDetectedItem(null);
+    setIsScanning(true);
+    lastScannedQRRef.current = ''; // Allow re-scanning
+  }, []);
 
-  // Fetch sample data from database
-  const fetchAndAddSample = useCallback(async (qrText: string) => {
+  // Process scanned QR data
+  const processQRCode = useCallback(async (qrText: string) => {
+    // Prevent processing same QR twice in a row
+    if (qrText === lastScannedQRRef.current) {
+      return;
+    }
+    
+    // If we already have a detected item waiting for confirmation, ignore new scans
+    if (detectedItem) {
+      return;
+    }
+
+    lastScannedQRRef.current = qrText;
+    
     try {
       let qrData: QrData | null = null;
       let merchantCodeFromQR = '';
@@ -179,20 +194,13 @@ const PackingSlipQRScanner: React.FC<PackingSlipQRScannerProps> = ({ items, setI
         const response = await fetch(`/api/samples`);
         if (response.ok) {
           const samples = await response.json();
-          console.log('Fetched samples count:', samples.length);
-          console.log('Looking for designNo:', qrData!.designNo, 'merchantCode:', merchantCodeFromQR);
           
-          // Find matching sample - try multiple strategies
           const sample = samples.find((s: any) => {
             const designMatch = s.designNo && s.designNo.toUpperCase() === qrData!.designNo.toUpperCase();
             
             if (designMatch) {
-              // Check merchant abbreviation match
               const dbMerchantAbbrev = abbreviateMerchant(s.merchant || '');
-              console.log('Checking sample:', s.merchant, '-> abbrev:', dbMerchantAbbrev, 'vs QR:', merchantCodeFromQR);
-              
               if (merchantCodeFromQR && dbMerchantAbbrev === merchantCodeFromQR) {
-                console.log('MATCH FOUND by abbreviation!');
                 return true;
               }
             }
@@ -201,30 +209,28 @@ const PackingSlipQRScanner: React.FC<PackingSlipQRScannerProps> = ({ items, setI
           });
           
           if (sample) {
-            // Use full data from database
-            console.log('Using database sample:', sample.merchant, sample.productionSampleType);
             qrData = {
               merchant: sample.merchant,
               productionSampleType: (sample.productionSampleType || '').toUpperCase(),
               designNo: sample.designNo,
               qrCodeId: sample.qrCodeId || qrData!.qrCodeId
             };
-          } else {
-            console.log('No matching sample found in database');
           }
-        } else {
-          console.log('API response not ok:', response.status);
         }
       } catch (fetchError) {
         console.log('Error fetching from database:', fetchError);
       }
 
-      addScannedItem(qrData);
+      // Play beep and show detected item
+      playBeep();
+      setDetectedItem(qrData);
+      setIsScanning(false);
+      
     } catch (error) {
       console.error("QR processing error:", error);
       toast.error("Error processing QR", { autoClose: 1500 });
     }
-  }, [addScannedItem]);
+  }, [detectedItem, playBeep]);
 
   // Stop camera
   const stopCamera = useCallback(() => {
@@ -242,20 +248,20 @@ const PackingSlipQRScanner: React.FC<PackingSlipQRScannerProps> = ({ items, setI
 
   // Start camera and scanning
   const startScanning = useCallback(async () => {
-    // Prevent multiple simultaneous starts
     if (isStartingRef.current || cameraLoading) {
       return;
     }
     
-    // Stop any existing camera first
     stopCamera();
     
     isStartingRef.current = true;
     setCameraLoading(true);
     setCameraError(null);
+    setDetectedItem(null);
+    setIsScanning(true);
+    lastScannedQRRef.current = '';
 
     try {
-      // Check for secure context
       if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
         throw new Error('Camera requires HTTPS');
       }
@@ -264,7 +270,6 @@ const PackingSlipQRScanner: React.FC<PackingSlipQRScannerProps> = ({ items, setI
         throw new Error('Camera not supported');
       }
 
-      // Small delay to ensure video element is ready
       await new Promise(resolve => setTimeout(resolve, 100));
 
       if (!videoRef.current) {
@@ -279,7 +284,7 @@ const PackingSlipQRScanner: React.FC<PackingSlipQRScannerProps> = ({ items, setI
         (result, error) => {
           if (result) {
             const qrText = result.getText();
-            fetchAndAddSample(qrText);
+            processQRCode(qrText);
           }
         }
       );
@@ -305,7 +310,7 @@ const PackingSlipQRScanner: React.FC<PackingSlipQRScannerProps> = ({ items, setI
       setCameraLoading(false);
       isStartingRef.current = false;
     }
-  }, [cameraLoading, stopCamera, fetchAndAddSample]);
+  }, [cameraLoading, stopCamera, processQRCode]);
 
   // Close scanner
   const handleClose = useCallback(() => {
@@ -340,7 +345,9 @@ const PackingSlipQRScanner: React.FC<PackingSlipQRScannerProps> = ({ items, setI
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <h2 style={{ fontSize: '16px', fontWeight: '600', margin: 0 }}>Scan Items</h2>
-              <p style={{ fontSize: '12px', color: '#bfdbfe', margin: '2px 0 0 0' }}>Point at QR code</p>
+              <p style={{ fontSize: '12px', color: '#bfdbfe', margin: '2px 0 0 0' }}>
+                {detectedItem ? 'Item detected - Confirm to add' : 'Point at QR code'}
+              </p>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <button
@@ -364,7 +371,7 @@ const PackingSlipQRScanner: React.FC<PackingSlipQRScannerProps> = ({ items, setI
         <div style={{ backgroundColor: '#f3f4f6', padding: '8px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-around', borderBottom: '1px solid #e5e7eb', textAlign: 'center' }}>
           <div>
             <div style={{ fontSize: '18px', fontWeight: '700', color: '#2563eb' }}>{scanCount}</div>
-            <div style={{ fontSize: '11px', color: '#6b7280' }}>Scans</div>
+            <div style={{ fontSize: '11px', color: '#6b7280' }}>Added</div>
           </div>
           <div style={{ width: '1px', height: '24px', backgroundColor: '#d1d5db' }}></div>
           <div>
@@ -379,26 +386,24 @@ const PackingSlipQRScanner: React.FC<PackingSlipQRScannerProps> = ({ items, setI
         </div>
 
         {/* Camera View */}
-        <div style={{ position: 'relative', backgroundColor: '#000', height: '200px' }}>
+        <div style={{ position: 'relative', backgroundColor: '#000', height: '180px' }}>
           <video
             ref={videoRef}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: detectedItem ? 0.3 : 1 }}
             autoPlay
             playsInline
             muted
           />
           
-          {/* Scan Frame Overlay */}
-          {cameraActive && !cameraError && (
+          {/* Scan Frame Overlay - only show when scanning */}
+          {cameraActive && !cameraError && isScanning && !detectedItem && (
             <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-              <div style={{ position: 'relative', width: '140px', height: '140px' }}>
-                {/* Corner brackets */}
+              <div style={{ position: 'relative', width: '120px', height: '120px' }}>
                 <div style={{ position: 'absolute', top: 0, left: 0, width: '20px', height: '20px', borderTop: '3px solid #4ade80', borderLeft: '3px solid #4ade80', borderTopLeftRadius: '4px' }}></div>
                 <div style={{ position: 'absolute', top: 0, right: 0, width: '20px', height: '20px', borderTop: '3px solid #4ade80', borderRight: '3px solid #4ade80', borderTopRightRadius: '4px' }}></div>
                 <div style={{ position: 'absolute', bottom: 0, left: 0, width: '20px', height: '20px', borderBottom: '3px solid #4ade80', borderLeft: '3px solid #4ade80', borderBottomLeftRadius: '4px' }}></div>
                 <div style={{ position: 'absolute', bottom: 0, right: 0, width: '20px', height: '20px', borderBottom: '3px solid #4ade80', borderRight: '3px solid #4ade80', borderBottomRightRadius: '4px' }}></div>
                 
-                {/* Scanning line */}
                 <motion.div
                   style={{ position: 'absolute', left: '4px', right: '4px', height: '2px', backgroundColor: '#4ade80' }}
                   animate={{ top: ['10%', '90%', '10%'] }}
@@ -408,19 +413,6 @@ const PackingSlipQRScanner: React.FC<PackingSlipQRScannerProps> = ({ items, setI
             </div>
           )}
 
-          {/* Flash effect */}
-          <AnimatePresence>
-            {showFlash && (
-              <motion.div
-                initial={{ opacity: 0.7 }}
-                animate={{ opacity: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.15 }}
-                style={{ position: 'absolute', inset: 0, backgroundColor: '#4ade80', pointerEvents: 'none' }}
-              />
-            )}
-          </AnimatePresence>
-
           {/* Loading state */}
           {cameraLoading && (
             <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
@@ -429,7 +421,7 @@ const PackingSlipQRScanner: React.FC<PackingSlipQRScannerProps> = ({ items, setI
             </div>
           )}
 
-          {/* Idle state - camera not started */}
+          {/* Idle state */}
           {!cameraActive && !cameraLoading && !cameraError && (
             <div style={{ position: 'absolute', inset: 0, backgroundColor: '#1f2937', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
               <Camera style={{ width: '40px', height: '40px', color: '#6b7280', marginBottom: '8px' }} />
@@ -450,66 +442,120 @@ const PackingSlipQRScanner: React.FC<PackingSlipQRScannerProps> = ({ items, setI
               </button>
             </div>
           )}
-
-          {/* Last scanned indicator */}
-          {lastScanned && cameraActive && (
-            <div style={{ position: 'absolute', bottom: '8px', left: '8px', right: '8px' }}>
-              <div style={{ backgroundColor: 'rgba(34, 197, 94, 0.9)', color: 'white', padding: '8px 12px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
-                <CheckCircle style={{ width: '16px', height: '16px' }} />
-                <span style={{ fontWeight: '500' }}>{lastScanned}</span>
-              </div>
-            </div>
-          )}
         </div>
+
+        {/* Detected Item Panel */}
+        {detectedItem && (
+          <div style={{ padding: '12px 16px', backgroundColor: '#ecfdf5', borderBottom: '1px solid #a7f3d0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+              <CheckCircle style={{ width: '18px', height: '18px', color: '#16a34a' }} />
+              <span style={{ fontWeight: '600', color: '#166534', fontSize: '14px' }}>Item Detected</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', fontSize: '12px' }}>
+              <div><span style={{ color: '#6b7280' }}>Merchant:</span> <span style={{ fontWeight: '500', color: '#111827' }}>{detectedItem.merchant}</span></div>
+              <div><span style={{ color: '#6b7280' }}>Design:</span> <span style={{ fontWeight: '500', color: '#111827' }}>{detectedItem.designNo}</span></div>
+              <div style={{ gridColumn: 'span 2' }}><span style={{ color: '#6b7280' }}>Type:</span> <span style={{ fontWeight: '500', color: '#111827' }}>{detectedItem.productionSampleType}</span></div>
+            </div>
+          </div>
+        )}
 
         {/* Footer */}
         <div style={{ padding: '12px', backgroundColor: 'white', borderTop: '1px solid #e5e7eb' }}>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button
-              onClick={cameraActive ? stopCamera : startScanning}
-              disabled={cameraLoading}
-              style={{ 
-                flex: 1, 
-                padding: '10px', 
-                borderRadius: '8px', 
-                fontWeight: '500', 
-                fontSize: '13px',
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
-                gap: '6px',
-                border: 'none',
-                cursor: cameraLoading ? 'not-allowed' : 'pointer',
-                opacity: cameraLoading ? 0.5 : 1,
-                backgroundColor: cameraActive ? '#e5e7eb' : '#2563eb',
-                color: cameraActive ? '#374151' : 'white'
-              }}
-            >
-              <Camera style={{ width: '16px', height: '16px' }} />
-              {cameraLoading ? 'Starting...' : cameraActive ? 'Stop' : 'Start Camera'}
-            </button>
-            <button
-              onClick={handleClose}
-              style={{ 
-                flex: 1, 
-                padding: '10px', 
-                borderRadius: '8px', 
-                fontWeight: '500', 
-                fontSize: '13px',
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
-                gap: '6px',
-                border: 'none',
-                cursor: 'pointer',
-                backgroundColor: '#16a34a',
-                color: 'white'
-              }}
-            >
-              <CheckCircle style={{ width: '16px', height: '16px' }} />
-              Done ({items.length})
-            </button>
-          </div>
+          {detectedItem ? (
+            /* Confirmation buttons when item is detected */
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                onClick={cancelAndScanNext}
+                style={{ 
+                  flex: 1, 
+                  padding: '10px', 
+                  borderRadius: '8px', 
+                  fontWeight: '500', 
+                  fontSize: '13px',
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  gap: '6px',
+                  border: '1px solid #d1d5db',
+                  cursor: 'pointer',
+                  backgroundColor: 'white',
+                  color: '#374151'
+                }}
+              >
+                <X style={{ width: '16px', height: '16px' }} />
+                Skip
+              </button>
+              <button
+                onClick={addConfirmedItem}
+                style={{ 
+                  flex: 2, 
+                  padding: '10px', 
+                  borderRadius: '8px', 
+                  fontWeight: '600', 
+                  fontSize: '14px',
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  gap: '6px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  backgroundColor: '#16a34a',
+                  color: 'white'
+                }}
+              >
+                <Plus style={{ width: '18px', height: '18px' }} />
+                Add Item (+1)
+              </button>
+            </div>
+          ) : (
+            /* Normal buttons when scanning */
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                onClick={cameraActive ? stopCamera : startScanning}
+                disabled={cameraLoading}
+                style={{ 
+                  flex: 1, 
+                  padding: '10px', 
+                  borderRadius: '8px', 
+                  fontWeight: '500', 
+                  fontSize: '13px',
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  gap: '6px',
+                  border: 'none',
+                  cursor: cameraLoading ? 'not-allowed' : 'pointer',
+                  opacity: cameraLoading ? 0.5 : 1,
+                  backgroundColor: cameraActive ? '#e5e7eb' : '#2563eb',
+                  color: cameraActive ? '#374151' : 'white'
+                }}
+              >
+                <Camera style={{ width: '16px', height: '16px' }} />
+                {cameraLoading ? 'Starting...' : cameraActive ? 'Stop' : 'Start Camera'}
+              </button>
+              <button
+                onClick={handleClose}
+                style={{ 
+                  flex: 1, 
+                  padding: '10px', 
+                  borderRadius: '8px', 
+                  fontWeight: '500', 
+                  fontSize: '13px',
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  gap: '6px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  backgroundColor: '#16a34a',
+                  color: 'white'
+                }}
+              >
+                <CheckCircle style={{ width: '16px', height: '16px' }} />
+                Done ({items.length})
+              </button>
+            </div>
+          )}
         </div>
       </motion.div>
     </div>
