@@ -3,6 +3,7 @@
   "outputDirectory": ".next",
   "framework": "nextjs",
   "env": {
-    "MONGODB_URI": "mongodb+srv://simranaswani4292_db_user:fRz4HrcnpPjFa6Gf@samplemanagementcluster.crgxmmt.mongodb.net/SampleManagementCluster?retryWrites=true&w=majority&appName=SampleManagementCluster"
+    "MONGODB_URI": "mongodb+srv://simranaswani4292_db_user:fRz4HrcnpPjFa6Gf@samplemanagementcluster.crgxmmt.mongodb.net/SampleManagementCluster?retryWrites=true&w=majority&appName=SampleManagementCluster",
+    "JWT_SECRET": "adjlsadinwedw122384bdhjkfb38b938he"
   }
 }
