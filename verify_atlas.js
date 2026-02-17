@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 // Atlas MongoDB connection
-const ATLAS_MONGODB_URI = 'mongodb+srv://simranaswani4292_db_user:fRz4HrcnpPjFa6Gf@samplemanagementcluster.crgxmmt.mongodb.net/?retryWrites=true&w=majority&appName=SampleManagementCluster';
+const ATLAS_MONGODB_URI = 'mongodb+srv://simranaswani4292_db_user:fRz4HrcnpPjFa6Gf@samplemanagementcluster.crgxmmt.mongodb.net/SampleManagementCluster?retryWrites=true&w=majority&appName=SampleManagementCluster';
 
 // Sample Schema
 const SampleSchema = new mongoose.Schema({
@@ -78,7 +78,7 @@ async function verifyAtlasData() {
         .sort({ createdAt: -1 })
         .limit(3)
         .select('merchant designNo pieces createdAt');
-      
+
       recentSamples.forEach((sample, index) => {
         console.log(`   ${index + 1}. ${sample.merchant} - ${sample.designNo} (${sample.pieces} pieces)`);
       });

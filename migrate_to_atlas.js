@@ -6,7 +6,7 @@ const path = require('path');
 const LOCAL_MONGODB_URI = 'mongodb://localhost:27017/sample_management';
 
 // Atlas MongoDB connection
-const ATLAS_MONGODB_URI = 'mongodb+srv://simranaswani4292_db_user:fRz4HrcnpPjFa6Gf@samplemanagementcluster.crgxmmt.mongodb.net/?retryWrites=true&w=majority&appName=SampleManagementCluster';
+const ATLAS_MONGODB_URI = 'mongodb+srv://simranaswani4292_db_user:fRz4HrcnpPjFa6Gf@samplemanagementcluster.crgxmmt.mongodb.net/SampleManagementCluster?retryWrites=true&w=majority&appName=SampleManagementCluster';
 
 // Sample Schema
 const SampleSchema = new mongoose.Schema({
@@ -62,7 +62,7 @@ async function migrateData() {
     console.log('📦 Migrating samples...');
     const samples = await LocalSample.find({});
     console.log(`   Found ${samples.length} samples in local database`);
-    
+
     if (samples.length > 0) {
       await AtlasSample.insertMany(samples);
       console.log(`   ✅ Successfully migrated ${samples.length} samples to Atlas`);
@@ -74,7 +74,7 @@ async function migrateData() {
     console.log('📋 Migrating packing slips...');
     const packingSlips = await LocalPackingSlip.find({});
     console.log(`   Found ${packingSlips.length} packing slips in local database`);
-    
+
     if (packingSlips.length > 0) {
       await AtlasPackingSlip.insertMany(packingSlips);
       console.log(`   ✅ Successfully migrated ${packingSlips.length} packing slips to Atlas`);
@@ -86,7 +86,7 @@ async function migrateData() {
     console.log('\n🔍 Verifying migration...');
     const atlasSampleCount = await AtlasSample.countDocuments();
     const atlasPackingSlipCount = await AtlasPackingSlip.countDocuments();
-    
+
     console.log(`   Samples in Atlas: ${atlasSampleCount}`);
     console.log(`   Packing Slips in Atlas: ${atlasPackingSlipCount}`);
 
