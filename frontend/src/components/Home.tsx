@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Plus, BarChart3, Package, TrendingUp, ArrowRight, QrCode, Clock, FileText, Shield } from 'lucide-react';
+import { Plus, BarChart3, Package, TrendingUp, ArrowRight, QrCode, Clock, FileText, Shield, Search, History } from 'lucide-react';
 import AllenJorgioLogo from '../components/AllenJorgioLogo';
 
 import { useAuth } from '../context/AuthContext';
@@ -41,6 +41,22 @@ const Home: React.FC = () => {
       color: 'bg-yellow-600',
       hoverColor: 'hover:bg-yellow-700'
     },
+    {
+      title: 'View QR Codes',
+      description: 'Search and manage all generated sample QR codes',
+      icon: Search,
+      path: '/view-qrs',
+      color: 'bg-orange-600',
+      hoverColor: 'hover:bg-orange-700'
+    },
+    {
+      title: 'Packing History',
+      description: 'View and manage previous packing slip records',
+      icon: History,
+      path: '/packing-slip-history',
+      color: 'bg-pink-600',
+      hoverColor: 'hover:bg-pink-700'
+    },
     ...(user?.role === 'admin' ? [{
       title: 'User Management',
       description: 'Approve account requests and manage permissions',
@@ -79,7 +95,7 @@ const Home: React.FC = () => {
         </motion.div>
 
         {/* Feature Cards */}
-        <div className={`grid grid-cols-1 sm:grid-cols-2 ${user?.role === 'admin' ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-6`}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
           {features.map((feature, index) => {
             const IconComponent = feature.icon;
             return (

@@ -33,7 +33,8 @@ const CreateSample: React.FC = () => {
   };
   const getQRData = (sample: Sample) => {
     const typeCode = getTypeCode(sample.productionSampleType);
-    return `${sample.merchant}_${sample.designNo}_${typeCode}`;
+    const merchantCode = sample.merchant.replace(/\s+/g, '').slice(0, 6);
+    return `${typeCode}|${sample.designNo}|${merchantCode}`;
   };
 
   // Common merchants list for dropdown
@@ -101,10 +102,10 @@ const CreateSample: React.FC = () => {
 
     try {
       // Validate samples before submission
-      const validSamples = samples.filter(sample => 
-        sample.merchant.trim() !== '' && 
-        sample.productionSampleType.trim() !== '' && 
-        sample.designNo.trim() !== '' && 
+      const validSamples = samples.filter(sample =>
+        sample.merchant.trim() !== '' &&
+        sample.productionSampleType.trim() !== '' &&
+        sample.designNo.trim() !== '' &&
         sample.pieces > 0
       );
 
@@ -123,14 +124,14 @@ const CreateSample: React.FC = () => {
       }
 
       const response = await sampleAPI.createSamples(validSamples);
-      
+
       // Handle the API response structure
       if (response.data.results && response.data.results.created > 0) {
         // For bulk import, use the created samples from the response
         const validSamples = (response.data.data || []).filter((sample: any) => sample != null);
         setSubmittedSamples(validSamples);
         setShowSuccess(true);
-        
+
         // Show a message indicating if samples were updated
         if (validSamples.length > 0) {
           console.log(`${validSamples.length} sample(s) processed successfully. Some may have been updated if they already existed.`);
@@ -283,12 +284,12 @@ const CreateSample: React.FC = () => {
           transition={{ duration: 0.6 }}
           className="bg-white rounded-2xl shadow-md p-8"
         >
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">
+          <div className="text-center mb-12">
+            <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">
               Create Sample Entry
             </h1>
-            <p className="text-gray-600">
-              Add new textile samples with QR code generation
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Add new textile samples to the system and generate high-quality QR code stickers for production tracking.
             </p>
           </div>
 
@@ -341,7 +342,7 @@ const CreateSample: React.FC = () => {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                         </svg>
                       </button>
-                      
+
                       {/* Dropdown */}
                       {merchantDropdownOpen[index] && (
                         <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
@@ -492,7 +493,7 @@ const CreateSample: React.FC = () => {
                       <div className="text-center">
                         <div className="mb-4">
                           <MicroQRCode
-                            id={`qr-${qrId}`} 
+                            id={`qr-${qrId}`}
                             value={getQRData(sample)}
                             size={120}
                           />
