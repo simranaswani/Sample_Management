@@ -1,10 +1,13 @@
 import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Plus, BarChart3, Package, TrendingUp, ArrowRight, QrCode, Clock, FileText } from 'lucide-react';
+import { Plus, BarChart3, Package, TrendingUp, ArrowRight, QrCode, Clock, FileText, Shield } from 'lucide-react';
 import AllenJorgioLogo from '../components/AllenJorgioLogo';
 
+import { useAuth } from '../context/AuthContext';
+
 const Home: React.FC = () => {
+  const { user } = useAuth();
   const features = [
     {
       title: 'Create Sample Entry',
@@ -37,7 +40,15 @@ const Home: React.FC = () => {
       path: '/daily-production',
       color: 'bg-yellow-600',
       hoverColor: 'hover:bg-yellow-700'
-    }
+    },
+    ...(user?.role === 'admin' ? [{
+      title: 'User Management',
+      description: 'Approve account requests and manage permissions',
+      icon: Shield,
+      path: '/admin/users',
+      color: 'bg-indigo-600',
+      hoverColor: 'hover:bg-indigo-700'
+    }] : [])
   ];
 
   return (
@@ -54,10 +65,13 @@ const Home: React.FC = () => {
             <div className="flex justify-center mb-6">
               <AllenJorgioLogo size="lg" showSubtitle={false} />
             </div>
-            <h2 className="text-2xl md:text-3xl font-semibold text-primary-600 mb-4">
-              Sample Management System
+            <h2 className="text-2xl md:text-3xl font-semibold text-primary-600 mb-2">
+              Welcome back, {user?.name || 'User'}!
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <h3 className="text-xl font-medium text-gray-700 mb-4 text-center">
+              Sample Management System
+            </h3>
+            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
               Streamline your textile manufacturing workflow with QR code integration,
               inventory tracking, and automated packing slip generation.
             </p>
@@ -65,7 +79,7 @@ const Home: React.FC = () => {
         </motion.div>
 
         {/* Feature Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className={`grid grid-cols-1 sm:grid-cols-2 ${user?.role === 'admin' ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-6`}>
           {features.map((feature, index) => {
             const IconComponent = feature.icon;
             return (

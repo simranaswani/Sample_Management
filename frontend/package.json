@@ -12,12 +12,18 @@
     "@nuintun/qrcode": "^5.0.2",
     "@testing-library/jest-dom": "^6.8.0",
     "@testing-library/react": "^16.3.0",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cookie": "^0.6.0",
     "@types/jest": "^30.0.0",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/qrcode.react": "^1.0.5",
     "@zxing/browser": "^0.1.5",
     "axios": "^1.11.0",
+    "bcryptjs": "^3.0.3",
+    "cookie": "^1.1.1",
     "framer-motion": "^12.23.12",
     "html2canvas": "^1.4.1",
+    "jsonwebtoken": "^9.0.3",
     "jspdf": "^3.0.2",
     "lucide-react": "^0.542.0",
     "mongoose": "^8.0.0",
@@ -40,6 +46,7 @@
     "eslint-config-next": "^14.0.0"
   },
   "optionalDependencies": {
-    "@next/swc-darwin-x64": "^16.1.1"
+    "@next/swc-darwin-arm64": "^16.1.6",
+    "@next/swc-darwin-x64": "^16.1.6"
   }
 }
