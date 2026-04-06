@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Plus, BarChart3, Package, TrendingUp, ArrowRight, QrCode, Clock, FileText, Shield, Search, History } from 'lucide-react';
+import { Plus, BarChart3, Package, TrendingUp, ArrowRight, QrCode, Clock, FileText, Shield, Search, History, User } from 'lucide-react';
 import AllenJorgioLogo from '../components/AllenJorgioLogo';
 
 import { useAuth } from '../context/AuthContext';
@@ -56,6 +56,14 @@ const Home: React.FC = () => {
       path: '/packing-slip-history',
       color: 'bg-pink-600',
       hoverColor: 'hover:bg-pink-700'
+    },
+    {
+      title: 'Receiver History',
+      description: 'View unique merchant and design combinations per receiver',
+      icon: User,
+      path: '/receiver-history',
+      color: 'bg-teal-600',
+      hoverColor: 'hover:bg-teal-700'
     },
     ...(user?.role === 'admin' ? [{
       title: 'User Management',

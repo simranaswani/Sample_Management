@@ -18,6 +18,7 @@ const Navbar: React.FC = () => {
       { path: '/daily-production', label: 'Daily Production', icon: TrendingUp },
       { path: '/create-packing-slip', label: 'Packing Slip', icon: Package },
       { path: '/packing-slip-history', label: 'Packing History', icon: History },
+      { path: '/receiver-history', label: 'Receiver History', icon: UserIcon },
       { path: '/view-qrs', label: 'View QRs', icon: Search },
       ...(user.role === 'admin' ? [{ path: '/admin/users', label: 'User Management', icon: Shield }] : []),
     ] : []),
